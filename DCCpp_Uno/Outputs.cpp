@@ -74,8 +74,10 @@ the state of any outputs being monitored or controlled by a separate interface o
 #include "Outputs.h"
 #include "SerialCommand.h"
 #include "DCCpp_Uno.h"
+#ifdef EESTORE
 #include "EEStore.h"
 #include <EEPROM.h>
+#endif
 #include "Comm.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -83,8 +85,10 @@ the state of any outputs being monitored or controlled by a separate interface o
 void Output::activate(int s){
   data.oStatus=(s>0);                                               // if s>0, set status to active, else inactive
   digitalWrite(data.pin,data.oStatus ^ bitRead(data.iFlag,0));      // set state of output pin to HIGH or LOW depending on whether bit zero of iFlag is set to 0 (ACTIVE=HIGH) or 1 (ACTIVE=LOW)
+#ifdef EESTORE
   if(num>0)
     EEPROM.put(num,data.oStatus);
+#endif
   INTERFACE.print("<Y");
   INTERFACE.print(data.id);
   if(data.oStatus==0)
@@ -183,7 +187,7 @@ void Output::parse(char *c){
 void Output::load(){
   struct OutputData data;
   Output *tt;
-
+#ifdef EESTORE
   for(int i=0;i<EEStore::eeStore->data.nOutputs;i++){
     EEPROM.get(EEStore::pointer(),data);  
     tt=create(data.id,data.pin,data.iFlag);
@@ -193,13 +197,15 @@ void Output::load(){
     tt->num=EEStore::pointer();
     EEStore::advance(sizeof(tt->data));
   }  
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 void Output::store(){
   Output *tt;
-  
+
+#ifdef EESTORE  
   tt=firstOutput;
   EEStore::eeStore->data.nOutputs=0;
   
@@ -210,6 +216,7 @@ void Output::store(){
     tt=tt->nextOutput;
     EEStore::eeStore->data.nOutputs++;
   }
+#endif
   
 }
 ///////////////////////////////////////////////////////////////////////////////

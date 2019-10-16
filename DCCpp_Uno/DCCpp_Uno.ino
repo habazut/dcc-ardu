@@ -2,6 +2,7 @@
 
 DCC++ BASE STATION
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
+              2016-2019 Harald Barth
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -169,13 +170,15 @@ DCC++ BASE STATION is configured through the Config.h file that contains all use
 // BEGIN BY INCLUDING THE HEADER FILES FOR EACH MODULE
  
 #include "DCCpp_Uno.h"
+#include "Config.h"
 #include "PacketRegister.h"
 #include "CurrentMonitor.h"
 #include "Sensor.h"
 #include "SerialCommand.h"
 #include "Accessories.h"
+#ifdef EESTORE
 #include "EEStore.h"
-#include "Config.h"
+#endif
 #include "Comm.h"
 
 void showConfiguration();
@@ -227,24 +230,14 @@ void setup(){
     digitalWrite(SDCARD_CS,HIGH);     // Deselect the SD card
   #endif
 
+#ifdef EESTORE
   EEStore::init();                                          // initialize and load Turnout and Sensor definitions stored in EEPROM
+#endif
 
   pinMode(A5,INPUT);                                       // if pin A5 is grounded upon start-up, print system configuration and halt
   digitalWrite(A5,HIGH);
   if(!digitalRead(A5))
     showConfiguration();
-
-  Serial.print("<iDCC++ BASE STATION FOR ARDUINO ");      // Print Status to Serial Line regardless of COMM_TYPE setting so use can open Serial Monitor and check configurtion 
-  Serial.print(ARDUINO_TYPE);
-  Serial.print(" / ");
-  Serial.print(MOTOR_SHIELD_NAME);
-  Serial.print(": V-");
-  Serial.print(VERSION);
-  Serial.print(" / ");
-  Serial.print(__DATE__);
-  Serial.print(" ");
-  Serial.print(__TIME__);
-  Serial.print(">");
 
   #if COMM_TYPE == 1
     #ifdef IP_ADDRESS
@@ -257,16 +250,7 @@ void setup(){
              
   SerialCommand::init(&mainRegs, &progRegs, &mainMonitor);   // create structure to read and parse commands from serial line
 
-  Serial.print("<N");
-  Serial.print(COMM_TYPE);
-  Serial.print(": ");
-
-  #if COMM_TYPE == 0
-    Serial.print("SERIAL>");
-  #elif COMM_TYPE == 1
-    Serial.print(Ethernet.localIP());
-    Serial.print(">");
-  #endif
+  SerialCommand::printHeader();
   
   // CONFIGURE TIMER_1 TO OUTPUT 50% DUTY CYCLE DCC SIGNALS ON OC1B INTERRUPT PINS
   
@@ -422,17 +406,19 @@ void setup(){
 
 // THE INTERRUPT CODE MACRO:  R=REGISTER LIST (mainRegs or progRegs), and N=TIMER (0 or 1)
 
+// optimize time critical stuff harder 
+#pragma GCC push_options
+#pragma GCC optimize ("-O3")
+
 #define DCC_SIGNAL(R,N) \
-  if(R.currentBit==R.currentReg->activePacket->nBits){    /* IF no more bits in this DCC Packet */ \
-    R.currentBit=0;                                       /*   reset current bit pointer and determine which Register and Packet to process next--- */ \   
+  if(R.currentBit==(R.currentReg->packet)[(R.currentReg->ap)&1].nBits){    /* IF no more bits in this DCC Packet */ \
+    R.currentBit=0;                                       /*   reset current bit pointer and determine which Register and Packet to process next--- */ \
     if(R.nRepeat>0 && R.currentReg==R.reg){               /*   IF current Register is first Register AND should be repeated */ \
       R.nRepeat--;                                        /*     decrement repeat count; result is this same Packet will be repeated */ \
     } else if(R.nextReg!=NULL){                           /*   ELSE IF another Register has been updated */ \
       R.currentReg=R.nextReg;                             /*     update currentReg to nextReg */ \
       R.nextReg=NULL;                                     /*     reset nextReg to NULL */ \
-      R.tempPacket=R.currentReg->activePacket;            /*     flip active and update Packets */ \        
-      R.currentReg->activePacket=R.currentReg->updatePacket; \
-      R.currentReg->updatePacket=R.tempPacket; \
+      (R.currentReg->ap)^=0x01;                              /*     flip active and update Packets */ \
     } else{                                               /*   ELSE simply move to next Register */ \
       if(R.currentReg==R.maxLoadedReg)                    /*     BUT IF this is last Register loaded */ \
         R.currentReg=R.reg;                               /*       first reset currentReg to base Register, THEN */ \
@@ -440,14 +426,14 @@ void setup(){
     }                                                     /*   END-ELSE */ \
   }                                                       /* END-IF: currentReg, activePacket, and currentBit should now be properly set to point to next DCC bit */ \
                                                           \
-  if(R.currentReg->activePacket->buf[R.currentBit/8] & R.bitMask[R.currentBit%8]){     /* IF bit is a ONE */ \
+  if((R.currentReg->packet)[(R.currentReg->ap)&1].buf[R.currentBit/8] & R.bitMask[R.currentBit%8]){     /* IF bit is a ONE */ \
     OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                               /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
     OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                               /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
   } else{                                                                              /* ELSE it is a ZERO */ \
     OCR ## N ## A=DCC_ZERO_BIT_TOTAL_DURATION_TIMER ## N;                              /*   set OCRA for timer N to full cycle duration of DCC ZERO bit */ \
     OCR ## N ## B=DCC_ZERO_BIT_PULSE_DURATION_TIMER ## N;                              /*   set OCRB for timer N to half cycle duration of DCC ZERO bit */ \
-  }                                                                                    /* END-ELSE */ \ 
-                                                                                       \ 
+  }                                                                                    /* END-ELSE */ \
+                                                                                       \
   R.currentBit++;                                         /* point to next bit in current Packet */  
   
 ///////////////////////////////////////////////////////////////////////////////
@@ -472,6 +458,8 @@ ISR(TIMER3_COMPB_vect){              // set interrupt service for OCR3B of TIMER
 
 #endif
 
+// pop the -O3
+#pragma GCC pop_options
 
 ///////////////////////////////////////////////////////////////////////////////
 // PRINT CONFIGURATION INFO TO SERIAL PORT REGARDLESS OF INTERFACE TYPE
@@ -479,8 +467,11 @@ ISR(TIMER3_COMPB_vect){              // set interrupt service for OCR3B of TIMER
 
 void showConfiguration(){
 
+#if COMM_TYPE == 1
   int mac_address[]=MAC_ADDRESS;
+#endif
 
+#ifdef SHOWCONFIG
   Serial.print("\n*** DCC++ CONFIGURATION ***\n");
 
   Serial.print("\nVERSION:      ");
@@ -514,12 +505,14 @@ void showConfiguration(){
   Serial.print("\n     CURRENT: ");
   Serial.print(CURRENT_MONITOR_PIN_PROG);
 
+#ifdef EESTORE
   Serial.print("\n\nNUM TURNOUTS: ");
   Serial.print(EEStore::eeStore->data.nTurnouts);
   Serial.print("\n     SENSORS: ");
   Serial.print(EEStore::eeStore->data.nSensors);
   Serial.print("\n     OUTPUTS: ");
   Serial.print(EEStore::eeStore->data.nOutputs);
+#endif
   
   Serial.print("\n\nINTERFACE:    ");
   #if COMM_TYPE == 0
@@ -551,6 +544,7 @@ void showConfiguration(){
     #endif
   
   #endif
+#endif
   Serial.print("\n\nPROGRAM HALTED - PLEASE RESTART ARDUINO");
 
   while(true);

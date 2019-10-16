@@ -6,7 +6,6 @@ COPYRIGHT (c) 2013-2016 Gregg E. Berman
 Part of DCC++ BASE STATION for the Arduino
 
 **********************************************************************/
-
 #ifndef EEStore_h
 #define EEStore_h
 

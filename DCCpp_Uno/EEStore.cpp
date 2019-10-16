@@ -7,6 +7,8 @@ Part of DCC++ BASE STATION for the Arduino
 
 **********************************************************************/
 
+#include "Config.h"
+#ifdef EESTORE
 #include "DCCpp_Uno.h"
 #include "EEStore.h"
 #include "Accessories.h"
@@ -81,3 +83,4 @@ int EEStore::pointer(){
 EEStore *EEStore::eeStore=NULL;
 int EEStore::eeAddress=0;
 
+#endif

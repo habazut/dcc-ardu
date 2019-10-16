@@ -2,6 +2,7 @@
 
 DCCpp_Uno.h
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
+              2016-2019 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -16,7 +17,7 @@ Part of DCC++ BASE STATION for the Arduino
 // RELEASE VERSION
 /////////////////////////////////////////////////////////////////////////////////////
 
-#define VERSION "1.2.1+"
+#define VERSION "1.2.1+haba1"
 
 /////////////////////////////////////////////////////////////////////////////////////
 // AUTO-SELECT ARDUINO BOARD

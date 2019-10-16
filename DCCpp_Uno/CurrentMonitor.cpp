@@ -2,6 +2,7 @@
 
 CurrentMonitor.cpp
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
+              2016-2019 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -13,7 +14,7 @@ Part of DCC++ BASE STATION for the Arduino
 
 ///////////////////////////////////////////////////////////////////////////////
 
-CurrentMonitor::CurrentMonitor(int pin, char *msg){
+CurrentMonitor::CurrentMonitor(int pin, const char *msg){
     this->pin=pin;
     this->msg=msg;
     current=0;

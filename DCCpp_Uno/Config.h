@@ -2,6 +2,7 @@
 
 Config.h
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
+              2016-2019 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -20,7 +21,7 @@ Part of DCC++ BASE STATION for the Arduino
 //
 // DEFINE NUMBER OF MAIN TRACK REGISTER
 
-#define MAX_MAIN_REGISTERS 12
+#define MAX_MAIN_REGISTERS 50
 
 /////////////////////////////////////////////////////////////////////////////////////
 //
@@ -55,4 +56,8 @@ Part of DCC++ BASE STATION for the Arduino
 #define MAC_ADDRESS {  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEF }
 
 /////////////////////////////////////////////////////////////////////////////////////
+
+//#define EESTORE
+//#define SHOWCONFIG // to preserve SDRAM
+
 

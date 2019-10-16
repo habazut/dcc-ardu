@@ -62,8 +62,10 @@ the directions of any Turnouts being monitored or controlled by a separate inter
 #include "Accessories.h"
 #include "SerialCommand.h"
 #include "DCCpp_Uno.h"
+#ifdef EESTORE
 #include "EEStore.h"
 #include <EEPROM.h>
+#endif
 #include "Comm.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -73,8 +75,10 @@ void Turnout::activate(int s){
   data.tStatus=(s>0);                                    // if s>0 set turnout=ON, else if zero or negative set turnout=OFF
   sprintf(c,"a %d %d %d",data.address,data.subAddress,data.tStatus);
   SerialCommand::parse(c);
+#ifdef EESTORE
   if(num>0)
     EEPROM.put(num,data.tStatus);
+#endif
   INTERFACE.print("<H");
   INTERFACE.print(data.id);
   if(data.tStatus==0)
@@ -174,6 +178,7 @@ void Turnout::load(){
   struct TurnoutData data;
   Turnout *tt;
 
+#ifdef EESTORE
   for(int i=0;i<EEStore::eeStore->data.nTurnouts;i++){
     EEPROM.get(EEStore::pointer(),data);  
     tt=create(data.id,data.address,data.subAddress);
@@ -181,6 +186,7 @@ void Turnout::load(){
     tt->num=EEStore::pointer();
     EEStore::advance(sizeof(tt->data));
   }  
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -189,6 +195,7 @@ void Turnout::store(){
   Turnout *tt;
   
   tt=firstTurnout;
+#ifdef EESTORE
   EEStore::eeStore->data.nTurnouts=0;
   
   while(tt!=NULL){
@@ -198,7 +205,7 @@ void Turnout::store(){
     tt=tt->nextTurnout;
     EEStore::eeStore->data.nTurnouts++;
   }
-  
+#endif  
 }
 ///////////////////////////////////////////////////////////////////////////////
 

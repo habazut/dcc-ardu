@@ -2,6 +2,7 @@
 
 CurrentMonitor.h
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
+              2016-2019 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -25,8 +26,8 @@ struct CurrentMonitor{
   static long int sampleTime;
   int pin;
   float current;
-  char *msg;
-  CurrentMonitor(int, char *);
+  const char *msg;
+  CurrentMonitor(int, const char *);
   static boolean checkTime();
   void check();
 };

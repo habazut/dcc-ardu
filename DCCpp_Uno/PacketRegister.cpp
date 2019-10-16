@@ -2,6 +2,7 @@
 
 PacketRegister.cpp
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
+                   2016 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -12,19 +13,10 @@ Part of DCC++ BASE STATION for the Arduino
 #include "Comm.h"
 
 ///////////////////////////////////////////////////////////////////////////////
-
-void Register::initPackets(){
-  activePacket=packet;
-  updatePacket=packet+1;
-} // Register::initPackets
-
-///////////////////////////////////////////////////////////////////////////////
     
 RegisterList::RegisterList(int maxNumRegs){
   this->maxNumRegs=maxNumRegs;
   reg=(Register *)calloc((maxNumRegs+1),sizeof(Register));
-  for(int i=0;i<=maxNumRegs;i++)
-    reg[i].initPackets();
   regMap=(Register **)calloc((maxNumRegs+1),sizeof(Register *));
   speedTable=(int *)calloc((maxNumRegs+1),sizeof(int *));
   currentReg=reg;
@@ -39,7 +31,7 @@ RegisterList::RegisterList(int maxNumRegs){
 
 // LOAD DCC PACKET INTO TEMPORARY REGISTER 0, OR PERMANENT REGISTERS 1 THROUGH DCC_PACKET_QUEUE_MAX (INCLUSIVE)
 // CONVERTS 2, 3, 4, OR 5 BYTES INTO A DCC BIT STREAM WITH PREAMBLE, CHECKSUM, AND PROPER BYTE SEPARATORS
-// BITSTREAM IS STORED IN UP TO A 10-BYTE ARRAY (USING AT MOST 76 OF 80 BITS)
+// BITSTREAM IS STORED IN UP TO A 9-BYTE ARRAY (USING AT MOST 69 OF 72 BITS)
 
 void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int printFlag) volatile {
   
@@ -51,7 +43,7 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
    regMap[nReg]=maxLoadedReg+1;       // set Register Pointer for this Register Number to next available Register
  
   Register *r=regMap[nReg];           // set Register to be updated
-  Packet *p=r->updatePacket;          // set Packet in the Register to be updated
+  Packet *p=&((r->packet)[(r->ap+1)&1]);    // set Packet in the Register to be updated, (r-ap+1)&1 points to the updatePacket
   byte *buf=p->buf;                   // set byte buffer in the Packet to be updated
           
   b[nBytes]=b[0];                        // copy first byte into what will become the checksum byte  
@@ -59,30 +51,34 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
     b[nBytes]^=b[i];
   nBytes++;                              // increment number of bytes in packet to include checksum byte
       
-  buf[0]=0xFF;                        // first 8 bytes of 22-byte preamble
-  buf[1]=0xFF;                        // second 8 bytes of 22-byte preamble
-  buf[2]=0xFC + bitRead(b[0],7);      // last 6 bytes of 22-byte preamble + data start bit + b[0], bit 7
-  buf[3]=b[0]<<1;                     // b[0], bits 6-0 + data start bit
-  buf[4]=b[1];                        // b[1], all bits
-  buf[5]=b[2]>>1;                     // b[2], bits 7-1
-  buf[6]=b[2]<<7;                     // b[2], bit 0
+/*  buf[0]=0xFF;                        // first  8 bit of 22-bit preamble*/
+  buf[0]=0xFF;                        // second 8 bit of 14-bit preamble
+  buf[1]=0xFC + bitRead(b[0],7);      // last   6 bit of 14-bit preamble + data start bit + b[0], bit 7
+  buf[2]=b[0]<<1;                     // b[0], bits 6-0 + data start bit
+  buf[3]=b[1];                        // b[1], all bits
+  buf[4]=b[2]>>1;                     // b[2], bits 7-1
+  buf[5]=b[2]<<7;                     // b[2], bit 0
   
   if(nBytes==3){
-    p->nBits=49;
+    bitSet(buf[5],6);                 // endbit
+    p->nBits=42;
   } else{
-    buf[6]+=b[3]>>2;                  // b[3], bits 7-2
-    buf[7]=b[3]<<6;                   // b[3], bit 1-0
+    buf[5]+=b[3]>>2;                  // b[3], bits 7-2
+    buf[6]=b[3]<<6;                   // b[3], bit 1-0
     if(nBytes==4){
-      p->nBits=58;
+      bitSet(buf[6],5);               // endbit
+      p->nBits=51;
     } else{
-      buf[7]+=b[4]>>3;                // b[4], bits 7-3
-      buf[8]=b[4]<<5;                 // b[4], bits 2-0
+      buf[6]+=b[4]>>3;                // b[4], bits 7-3
+      buf[7]=b[4]<<5;                 // b[4], bits 2-0
       if(nBytes==5){
-        p->nBits=67;
+	bitSet(buf[7],4);             // endbit
+        p->nBits=60;
       } else{
-        buf[8]+=b[5]>>4;              // b[5], bits 7-4
-        buf[9]=b[5]<<4;               // b[5], bits 3-0
-        p->nBits=76;
+        buf[7]+=b[5]>>4;              // b[5], bits 7-4
+        buf[8]=b[5]<<4;               // b[5], bits 3-0
+	bitSet(buf[8],3);             // endbit
+        p->nBits=69;
       } // >5 bytes
     } // >4 bytes
   } // >3 bytes
@@ -126,11 +122,11 @@ void RegisterList::setThrottle(char *s) volatile{
        
   loadPacket(nReg,b,nB,0,1);
   
-  INTERFACE.print("<T");
-  INTERFACE.print(nReg); INTERFACE.print(" ");
-  INTERFACE.print(tSpeed); INTERFACE.print(" ");
+  INTERFACE.print(F("<T"));
+  INTERFACE.print(nReg); INTERFACE.print(F(" "));
+  INTERFACE.print(tSpeed); INTERFACE.print(F(" "));
   INTERFACE.print(tDirection);
-  INTERFACE.print(">");
+  INTERFACE.print(F(">"));
   
   speedTable[nReg]=tDirection==1?tSpeed:-tSpeed;
     
@@ -196,7 +192,7 @@ void RegisterList::writeTextPacket(char *s) volatile{
   nBytes=sscanf(s,"%d %x %x %x %x %x",&nReg,b,b+1,b+2,b+3,b+4)-1;
   
   if(nBytes<2 || nBytes>5){    // invalid valid packet
-    INTERFACE.print("<mInvalid Packet>");
+    INTERFACE.print(F("<mInvalid Packet>"));
     return;
   }
          
@@ -270,15 +266,15 @@ void RegisterList::readCV(char *s) volatile{
   if(d==0)    // verify unsuccessful
     bValue=-1;
 
-  INTERFACE.print("<r");
+  INTERFACE.print(F("<r"));
   INTERFACE.print(callBack);
-  INTERFACE.print("|");
+  INTERFACE.print(F("|"));
   INTERFACE.print(callBackSub);
-  INTERFACE.print("|");
+  INTERFACE.print(F("|"));
   INTERFACE.print(cv+1);
-  INTERFACE.print(" ");
+  INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
-  INTERFACE.print(">");
+  INTERFACE.print(F(">"));
         
 } // RegisterList::readCV()
 
@@ -326,15 +322,15 @@ void RegisterList::writeCVByte(char *s) volatile{
   if(d==0)    // verify unsuccessful
     bValue=-1;
 
-  INTERFACE.print("<r");
+  INTERFACE.print(F("<r"));
   INTERFACE.print(callBack);
-  INTERFACE.print("|");
+  INTERFACE.print(F("|"));
   INTERFACE.print(callBackSub);
-  INTERFACE.print("|");
+  INTERFACE.print(F("|"));
   INTERFACE.print(cv+1);
-  INTERFACE.print(" ");
+  INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
-  INTERFACE.print(">");
+  INTERFACE.print(F(">"));
 
 } // RegisterList::writeCVByte()
   
@@ -384,17 +380,17 @@ void RegisterList::writeCVBit(char *s) volatile{
   if(d==0)    // verify unsuccessful
     bValue=-1;
   
-  INTERFACE.print("<r");
+  INTERFACE.print(F("<r"));
   INTERFACE.print(callBack);
-  INTERFACE.print("|");
+  INTERFACE.print(F("|"));
   INTERFACE.print(callBackSub);
-  INTERFACE.print("|");
+  INTERFACE.print(F("|"));
   INTERFACE.print(cv+1);
-  INTERFACE.print(" ");
+  INTERFACE.print(F(" "));
   INTERFACE.print(bNum);
-  INTERFACE.print(" ");
+  INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
-  INTERFACE.print(">");
+  INTERFACE.print(F(">"));
 
 } // RegisterList::writeCVBit()
   
@@ -456,16 +452,16 @@ void RegisterList::writeCVBitMain(char *s) volatile{
 
 void RegisterList::printPacket(int nReg, byte *b, int nBytes, int nRepeat) volatile {
   
-  INTERFACE.print("<*");
+  INTERFACE.print(F("<*"));
   INTERFACE.print(nReg);
-  INTERFACE.print(":");
+  INTERFACE.print(F(":"));
   for(int i=0;i<nBytes;i++){
-    INTERFACE.print(" ");
+    INTERFACE.print(F(" "));
     INTERFACE.print(b[i],HEX);
   }
-  INTERFACE.print(" / ");
+  INTERFACE.print(F(" / "));
   INTERFACE.print(nRepeat);
-  INTERFACE.print(">");
+  INTERFACE.print(F(">"));
 } // RegisterList::printPacket()
 
 ///////////////////////////////////////////////////////////////////////////////
