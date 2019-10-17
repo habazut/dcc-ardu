@@ -467,6 +467,14 @@ void RegisterList::printPacket(int nReg, byte *b, int nBytes, int nRepeat) volat
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void RegisterList::printMaxNumRegs() volatile {
+      INTERFACE.print(F("<N"));
+      INTERFACE.print(maxNumRegs);
+      INTERFACE.print(F(">"));
+
+}
+///////////////////////////////////////////////////////////////////////////////
+
 byte RegisterList::idlePacket[3]={0xFF,0x00,0};                 // always leave extra byte for checksum computation
 byte RegisterList::resetPacket[3]={0x00,0x00,0};
 

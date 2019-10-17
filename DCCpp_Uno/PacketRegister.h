@@ -58,6 +58,7 @@ struct RegisterList{
   void writeCVByteMain(char *) volatile;
   void writeCVBitMain(char *s) volatile;  
   void printPacket(int, byte *, int, int) volatile;
+  void printMaxNumRegs() volatile;
 };
 
 #endif

@@ -596,6 +596,15 @@ void SerialCommand::parse(char *com){
       INTERFACE.println("");
       break;
 
+/***** PRINT MAX NUMBER OF SLOTS SUPPORTED BY MAIN REGISTER LIST ****/
+
+    case 'N':     // <N>
+/*
+ *    print number of slots/registers to interface
+ */
+      mRegs->printMaxNumRegs();
+      break;
+
   } // switch
 }; // SerialCommand::parse
 
