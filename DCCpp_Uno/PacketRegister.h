@@ -41,6 +41,7 @@ struct RegisterList{
   Register *nextReg;
   byte currentBit;
   byte nRepeat;
+  byte debugcount;
   int *speedTable;
   static byte idlePacket[];
   static byte resetPacket[];

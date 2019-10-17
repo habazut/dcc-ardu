@@ -56,7 +56,14 @@ Part of DCC++ BASE STATION for the Arduino
 #define MAC_ADDRESS {  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEF }
 
 /////////////////////////////////////////////////////////////////////////////////////
+//
+// ONLY ENABLE IF YOU ARE SURE THAT PIN 13 is not wired to motor shield
+// Value 0 or 1
+//
+#define LEDDEBUG 0
 
+/////////////////////////////////////////////////////////////////////////////////////
+//
 //#define EESTORE
 //#define SHOWCONFIG // to preserve SDRAM
 

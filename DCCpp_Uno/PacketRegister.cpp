@@ -25,6 +25,7 @@ RegisterList::RegisterList(int maxNumRegs){
   nextReg=NULL;
   currentBit=0;
   nRepeat=0;
+  debugcount=0;
 } // RegisterList::RegisterList
   
 ///////////////////////////////////////////////////////////////////////////////

@@ -306,8 +306,12 @@ void setup(){
   #define DCC_ONE_BIT_TOTAL_DURATION_TIMER0 28
   #define DCC_ONE_BIT_PULSE_DURATION_TIMER0 14
   
+#if LEDDEBUG == 1
+  pinMode(DIRECTION_MOTOR_CHANNEL_PIN_B, OUTPUT);    // Onboard LED sits on pin 13 which is DIRECTION_MOTOR_CHANNEL_PIN_B
+#else
   pinMode(DIRECTION_MOTOR_CHANNEL_PIN_B,INPUT);      // ensure this pin is not active! Direction will be controlled by DCC SIGNAL instead (below)
   digitalWrite(DIRECTION_MOTOR_CHANNEL_PIN_B,LOW);
+#endif
 
   pinMode(DCC_SIGNAL_PIN_PROG,OUTPUT);      // THIS ARDUINO OUTPUT PIN MUST BE PHYSICALLY CONNECTED TO THE PIN FOR DIRECTION-B OF MOTOR CHANNEL-B
 
@@ -426,6 +430,10 @@ void setup(){
     }                                                     /*   END-ELSE */ \
   }                                                       /* END-IF: currentReg, activePacket, and currentBit should now be properly set to point to next DCC bit */ \
                                                           \
+  if(LEDDEBUG && R.reg == mainRegs.reg && R.currentBit==0 && R.currentReg==R.reg+1){  /* At register number 1 */ \
+    R.debugcount++ & 1<<3 ? PORTB |= 32 : PORTB &=~ 32 ;                                                              \
+  }                                                                                                              \
+                                                                                                                 \
   if((R.currentReg->packet)[(R.currentReg->ap)&1].buf[R.currentBit/8] & R.bitMask[R.currentBit%8]){     /* IF bit is a ONE */ \
     OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                               /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
     OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                               /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
