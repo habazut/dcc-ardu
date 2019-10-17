@@ -29,13 +29,11 @@ extern void *__data_end;
 extern void *__heap_start;
 extern void *__brkval;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wreturn-local-addr"
 int over(){
-  int v = 0;
-  return (int)&v;
+  int v = 17;
+  int vp = (int)&v;
+  return vp;
 }
-#pragma GCC diagnostic pop
 
 ///////////////////////////////////////////////////////////////////////////////
 
