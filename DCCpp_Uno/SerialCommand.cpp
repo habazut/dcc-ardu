@@ -545,7 +545,7 @@ void SerialCommand::parse(char *com){
  *     returns: <f MEM>
  *     where MEM is the number of free bytes remaining in the Arduino's SRAM
  */
-      INTERFACE.print(F("<f "));
+      INTERFACE.print(F("<F "));
       INTERFACE.print(freeMemory());
       INTERFACE.print(F(" "));
       INTERFACE.print((int)__data_end);
