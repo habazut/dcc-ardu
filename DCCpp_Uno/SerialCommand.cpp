@@ -103,7 +103,7 @@ void SerialCommand::printHeader(){
     INTERFACE.print(F(__TIME__));
     INTERFACE.print(F(">"));
     
-    INTERFACE.print(F("<N"));
+    INTERFACE.print(F("<n"));
     INTERFACE.print(COMM_TYPE);
     INTERFACE.print(F(": "));
     
@@ -543,7 +543,7 @@ void SerialCommand::parse(char *com){
  *     returns: <f MEM>
  *     where MEM is the number of free bytes remaining in the Arduino's SRAM
  */
-      INTERFACE.print(F("<F "));
+      INTERFACE.print(F("<f "));
       INTERFACE.print(freeMemory());
       INTERFACE.print(F(" "));
       INTERFACE.print((int)__data_end);
@@ -596,7 +596,7 @@ void SerialCommand::parse(char *com){
 
 /***** PRINT MAX NUMBER OF SLOTS SUPPORTED BY MAIN REGISTER LIST ****/
 
-    case 'N':     // <N>
+    case '#':     // <#>
 /*
  *    print number of slots/registers to interface
  */

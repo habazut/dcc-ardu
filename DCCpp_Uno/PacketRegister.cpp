@@ -468,7 +468,7 @@ void RegisterList::printPacket(int nReg, byte *b, int nBytes, int nRepeat) volat
 ///////////////////////////////////////////////////////////////////////////////
 
 void RegisterList::printMaxNumRegs() volatile {
-      INTERFACE.print(F("<N"));
+      INTERFACE.print(F("<#"));
       INTERFACE.print(maxNumRegs);
       INTERFACE.print(F(">"));
 
