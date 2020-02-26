@@ -415,26 +415,34 @@ void setup(){
 #pragma GCC optimize ("-O3")
 
 #define DCC_SIGNAL(R,N) \
-  if(R.currentBit==(R.currentReg->packet)[(R.currentReg->ap)&1].nBits){    /* IF no more bits in this DCC Packet */ \
+  if(R.currentBit==(R.currentReg->packet)[0].nBits) {     /* IF no more bits in this DCC Packet */ \
+    (R.currentReg->packet)[0].buf[8] &= 0xFD;             /* Clear busy bit of register */   \
     R.currentBit=0;                                       /*   reset current bit pointer and determine which Register and Packet to process next--- */ \
     if(R.nRepeat>0 && R.currentReg==R.reg){               /*   IF current Register is first Register AND should be repeated */ \
       R.nRepeat--;                                        /*     decrement repeat count; result is this same Packet will be repeated */ \
     } else if(R.nextReg!=NULL){                           /*   ELSE IF another Register has been updated */ \
       R.currentReg=R.nextReg;                             /*     update currentReg to nextReg */ \
       R.nextReg=NULL;                                     /*     reset nextReg to NULL */ \
-      (R.currentReg->ap)^=0x01;                              /*     flip active and update Packets */ \
+/*      (R.currentReg->ap)^=0x01;                                flip active and update Packets */ \
     } else{                                               /*   ELSE simply move to next Register */ \
       if(R.currentReg==R.maxLoadedReg)                    /*     BUT IF this is last Register loaded */ \
         R.currentReg=R.reg;                               /*       first reset currentReg to base Register, THEN */ \
-      R.currentReg++;                                     /*     increment current Register (note this logic causes Register[0] to be skipped when simply cycling through all Registers) */ \
+      R.currentReg++;                                     /* increment current Register (note this logic causes Register[0] to be skipped when simply cycling through all Registers) */ \
     }                                                     /*   END-ELSE */ \
-  }                                                       /* END-IF: currentReg, activePacket, and currentBit should now be properly set to point to next DCC bit */ \
+                                                          /* currentReg, activePacket, and currentBit should now be properly set to point to next DCC bit */ \
                                                           \
+    if((R.currentReg->packet)[0].buf[8] & 0x01) {         /* IF invalid flag is set skip */   \
+      if(R.currentReg==R.maxLoadedReg)                    /*     BUT IF this is last Register loaded */ \
+        R.currentReg=R.reg;                               /*       first reset currentReg to base Register, THEN */ \
+      R.currentReg++;                                     /* jump to next register           */      \
+    } else                                                                                           \
+      (R.currentReg->packet)[0].buf[8] |= 0x02 ;          /* Set busy bit of register */   \
+  }   /* END-BIG-IF */                                                                                   \
   if(LEDDEBUG && R.reg == mainRegs.reg && R.currentBit==0 && R.currentReg==R.reg+1){  /* At register number 1 */ \
     R.debugcount++ & 1<<3 ? PORTB |= 32 : PORTB &=~ 32 ;                                                              \
   }                                                                                                              \
                                                                                                                  \
-  if((R.currentReg->packet)[(R.currentReg->ap)&1].buf[R.currentBit/8] & R.bitMask[R.currentBit%8]){     /* IF bit is a ONE */ \
+  if((R.currentReg->packet)[0].buf[R.currentBit/8] & R.bitMask[R.currentBit%8]){       /* IF bit is a ONE */ \
     OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                               /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
     OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                               /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
   } else{                                                                              /* ELSE it is a ZERO */ \

@@ -23,6 +23,7 @@ RegisterList::RegisterList(int maxNumRegs){
   regMap[0]=reg;
   maxLoadedReg=reg;
   nextReg=NULL;
+  recycleReg = NULL;
   currentBit=0;
   nRepeat=0;
   debugcount=0;
@@ -35,16 +36,38 @@ RegisterList::RegisterList(int maxNumRegs){
 // BITSTREAM IS STORED IN UP TO A 9-BYTE ARRAY (USING AT MOST 69 OF 72 BITS)
 
 void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int printFlag) volatile {
+  Register *loopReg = NULL;
+  Register *newReg = NULL;
   
   nReg=nReg%((maxNumRegs+1));          // force nReg to be between 0 and maxNumRegs, inclusive
 
   while(nextReg!=NULL);              // pause while there is a Register already waiting to be updated -- nextReg will be reset to NULL by interrupt when prior Register updated fully processed
  
+  newReg=maxLoadedReg+1;
+  for(loopReg=reg; loopReg <=maxLoadedReg; loopReg++) {
+      if (loopReg == recycleReg) {
+	  newReg = recycleReg;
+	  break;
+      }
+  }
+  if(regMap[nReg]==NULL)
+      recycleReg = NULL;
+  else
+      recycleReg = regMap[nReg];     // remember where the regMap[nReg] that will be invalidated was stored
+  regMap[nReg]=newReg;               // set the regMap[nReg] to be updated
+  INTERFACE.print(" NewReg= ");
+  INTERFACE.print((int)newReg);
+  INTERFACE.print(" recycleReg= ");
+  INTERFACE.print((int)recycleReg);
+    
+/*
   if(regMap[nReg]==NULL)              // first time this Register Number has been called
    regMap[nReg]=maxLoadedReg+1;       // set Register Pointer for this Register Number to next available Register
+*/
  
   Register *r=regMap[nReg];           // set Register to be updated
-  Packet *p=&((r->packet)[(r->ap+1)&1]);    // set Packet in the Register to be updated, (r-ap+1)&1 points to the updatePacket
+/*  Packet *p=&((r->packet)[(r->ap+1)&1]);    // set Packet in the Register to be updated, (r-ap+1)&1 points to the updatePacket*/
+  Packet *p=r->packet;                // set Packet in the Register to be updated, (r-ap+1)&1 points to the updatePacket
   byte *buf=p->buf;                   // set byte buffer in the Packet to be updated
           
   b[nBytes]=b[0];                        // copy first byte into what will become the checksum byte  
@@ -83,7 +106,10 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
       } // >5 bytes
     } // >4 bytes
   } // >3 bytes
+  buf[8] &= 0xFE;                                       // clear invalid flag on recycleReg
   
+  if (recycleReg!=NULL)
+      (recycleReg->packet)[0].buf[8] |= 0x01;           // set invalid flag on recycleReg
   nextReg=r;
   this->nRepeat=nRepeat;
   maxLoadedReg=max(maxLoadedReg,nextReg);

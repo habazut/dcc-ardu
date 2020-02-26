@@ -564,17 +564,23 @@ void SerialCommand::parse(char *com){
  *    FOR DIAGNOSTIC AND TESTING USE ONLY
  */
       INTERFACE.println("");
+      INTERFACE.print("currentReg: ");
+      INTERFACE.print((int)mRegs->currentReg);
+      INTERFACE.print(" maxLoadedReg: ");
+      INTERFACE.println((int)mRegs->maxLoadedReg);
       INTERFACE.println(F("Slot:\tReg\tActive\tBits"));
       for(Register *p=mRegs->reg;p<=mRegs->maxLoadedReg;p++){
 	INTERFACE.print(F("M")); INTERFACE.print((int)(p-mRegs->reg)); INTERFACE.print(F(":\t"));
         INTERFACE.print((int)p); INTERFACE.print(F("\t"));
 	{
-	  Packet *activePacket = &((p->packet)[(p->ap)&1]);
+	  Packet *activePacket = &((p->packet)[0]);
 	  INTERFACE.print((int)activePacket); INTERFACE.print(F("\t"));
 	  INTERFACE.print(activePacket->nBits); INTERFACE.print(F("\t"));
 	  for(int i=0;i< activePacket->nBits/8 + (activePacket->nBits%8 ? 1 : 0 ) && i<10;i++){
 	    INTERFACE.print(activePacket->buf[i],HEX); INTERFACE.print(F("\t"));
 	  }
+	  INTERFACE.print(F("F_"));
+	  INTERFACE.print((activePacket->buf[8])&0x03,HEX); INTERFACE.print(F("\t"));
 	}
 	INTERFACE.println("");
       }
@@ -582,7 +588,7 @@ void SerialCommand::parse(char *com){
         INTERFACE.print(F("P")); INTERFACE.print((int)(p-pRegs->reg)); INTERFACE.print(F(":\t"));
         INTERFACE.print((int)p); INTERFACE.print(F("\t"));
 	{
-	  Packet *activePacket = &((p->packet)[(p->ap)&1]);
+	  Packet *activePacket = &((p->packet)[0]);
 	  INTERFACE.print((int)activePacket); INTERFACE.print(F("\t"));
 	  INTERFACE.print(activePacket->nBits); INTERFACE.print(F("\t"));
 	  for(int i=0;i< activePacket->nBits/8 + (activePacket->nBits%8 ? 1 : 0 ) && i<10;i++){

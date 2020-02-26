@@ -28,8 +28,8 @@ struct Packet{
 }; // Packet
 
 struct Register{
-  Packet packet[2];
-  byte ap = 0;
+  Packet packet[1];
+/*  byte ap = 0;*/
 }; // Register
   
 struct RegisterList{  
@@ -39,6 +39,7 @@ struct RegisterList{
   Register *currentReg;
   Register *maxLoadedReg;
   Register *nextReg;
+  Register *recycleReg;
   byte currentBit;
   byte nRepeat;
   byte debugcount;
