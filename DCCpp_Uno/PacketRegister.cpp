@@ -65,9 +65,7 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
    regMap[nReg]=maxLoadedReg+1;       // set Register Pointer for this Register Number to next available Register
 */
  
-  Register *r=regMap[nReg];           // set Register to be updated
-/*  Packet *p=&((r->packet)[(r->ap+1)&1]);    // set Packet in the Register to be updated, (r-ap+1)&1 points to the updatePacket*/
-  Packet *p=r->packet;                // set Packet in the Register to be updated, (r-ap+1)&1 points to the updatePacket
+  Register *p=regMap[nReg];           // set Register to be updated
   byte *buf=p->buf;                   // set byte buffer in the Packet to be updated
           
   b[nBytes]=b[0];                        // copy first byte into what will become the checksum byte  
@@ -109,8 +107,8 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
   buf[8] &= 0xFE;                                       // clear invalid flag on recycleReg
   
   if (recycleReg!=NULL)
-      (recycleReg->packet)[0].buf[8] |= 0x01;           // set invalid flag on recycleReg
-  nextReg=r;
+      (recycleReg->buf)[8] |= 0x01;           // set invalid flag on recycleReg
+  nextReg=p;
   this->nRepeat=nRepeat;
   maxLoadedReg=max(maxLoadedReg,nextReg);
   

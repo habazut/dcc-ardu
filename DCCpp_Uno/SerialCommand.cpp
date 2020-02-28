@@ -568,32 +568,24 @@ void SerialCommand::parse(char *com){
       INTERFACE.print((int)mRegs->currentReg);
       INTERFACE.print(" maxLoadedReg: ");
       INTERFACE.println((int)mRegs->maxLoadedReg);
-      INTERFACE.println(F("Slot:\tReg\tActive\tBits"));
+      INTERFACE.println(F("Slot:\tReg\tBits"));
       for(Register *p=mRegs->reg;p<=mRegs->maxLoadedReg;p++){
 	INTERFACE.print(F("M")); INTERFACE.print((int)(p-mRegs->reg)); INTERFACE.print(F(":\t"));
-        INTERFACE.print((int)p); INTERFACE.print(F("\t"));
-	{
-	  Packet *activePacket = &((p->packet)[0]);
-	  INTERFACE.print((int)activePacket); INTERFACE.print(F("\t"));
-	  INTERFACE.print(activePacket->nBits); INTERFACE.print(F("\t"));
-	  for(int i=0;i< activePacket->nBits/8 + (activePacket->nBits%8 ? 1 : 0 ) && i<10;i++){
-	    INTERFACE.print(activePacket->buf[i],HEX); INTERFACE.print(F("\t"));
-	  }
-	  INTERFACE.print(F("F_"));
-	  INTERFACE.print((activePacket->buf[8])&0x03,HEX); INTERFACE.print(F("\t"));
+	INTERFACE.print((int)p); INTERFACE.print(F("\t"));
+	INTERFACE.print(p->nBits); INTERFACE.print(F("\t"));
+	for(int i=0;i< p->nBits/8 + (p->nBits%8 ? 1 : 0 ) && i<10;i++){
+	    INTERFACE.print(p->buf[i],HEX); INTERFACE.print(F("\t"));
 	}
+	INTERFACE.print(F("F_"));
+	INTERFACE.print((p->buf[8])&0x03,HEX); INTERFACE.print(F("\t"));
 	INTERFACE.println("");
       }
       for(Register *p=pRegs->reg;p<=pRegs->maxLoadedReg;p++){
         INTERFACE.print(F("P")); INTERFACE.print((int)(p-pRegs->reg)); INTERFACE.print(F(":\t"));
         INTERFACE.print((int)p); INTERFACE.print(F("\t"));
-	{
-	  Packet *activePacket = &((p->packet)[0]);
-	  INTERFACE.print((int)activePacket); INTERFACE.print(F("\t"));
-	  INTERFACE.print(activePacket->nBits); INTERFACE.print(F("\t"));
-	  for(int i=0;i< activePacket->nBits/8 + (activePacket->nBits%8 ? 1 : 0 ) && i<10;i++){
-	    INTERFACE.print(activePacket->buf[i],HEX); INTERFACE.print(F("\t"));
-	  }
+	INTERFACE.print(p->nBits); INTERFACE.print(F("\t"));
+	for(int i=0;i< p->nBits/8 + (p->nBits%8 ? 1 : 0 ) && i<10;i++){
+	    INTERFACE.print(p->buf[i],HEX); INTERFACE.print(F("\t"));
 	}
         INTERFACE.println("");
       }

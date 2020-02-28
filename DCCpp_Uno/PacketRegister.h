@@ -22,15 +22,10 @@ Part of DCC++ BASE STATION for the Arduino
 
 // Define a series of registers that can be sequentially accessed over a loop to generate a repeating series of DCC Packets
 
-struct Packet{
+struct Register{
   byte buf[9];
   byte nBits;
-}; // Packet
-
-struct Register{
-  Packet packet[1];
-/*  byte ap = 0;*/
-}; // Register
+}; // Packet, for now named Register 
   
 struct RegisterList{  
   int maxNumRegs;
