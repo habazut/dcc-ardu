@@ -2,7 +2,7 @@
 
 SerialCommand.cpp
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
-              2016-2019 Harald Barth
+              2016-2020 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -397,11 +397,10 @@ void SerialCommand::parse(char *com){
           continue;
         INTERFACE.print(F("<T"));
         INTERFACE.print(i); INTERFACE.print(F(" "));
-        if(mRegs->speedTable[i]>0){
-          INTERFACE.print(mRegs->speedTable[i]);
+	INTERFACE.print((mRegs->speedTable[i]) & 0x7F);
+        if((mRegs->speedTable[i]) & 0x80){
           INTERFACE.print(F(" 1>"));
         } else{
-          INTERFACE.print(-mRegs->speedTable[i]);
           INTERFACE.print(F(" 0>"));
         }          
       }

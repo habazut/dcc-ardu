@@ -2,7 +2,7 @@
 
 PacketRegister.cpp
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
-                   2016 Harald Barth
+              2016-2020 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -18,7 +18,7 @@ RegisterList::RegisterList(int maxNumRegs){
   this->maxNumRegs=maxNumRegs;
   reg=(Register *)calloc((maxNumRegs+1),sizeof(Register));
   regMap=(Register **)calloc((maxNumRegs+1),sizeof(Register *));
-  speedTable=(int *)calloc((maxNumRegs+1),sizeof(int *));
+  speedTable=(byte *)calloc((maxNumRegs+1),sizeof(byte));
   currentReg=reg;
   regMap[0]=reg;
   maxLoadedReg=reg;
@@ -135,6 +135,11 @@ void RegisterList::setThrottle(char *s) volatile{
 
   if(cab>127)
     b[nB++]=highByte(cab) | 0xC0;      // convert train number into a two-byte address
+
+  if(tSpeed > 126)                     // Cap speed at max value 126
+      tSpeed = 126;
+
+  tDirection &= 0x01;                  // Only look at direction bit
     
   b[nB++]=lowByte(cab);
   b[nB++]=0x3F;                        // 128-step speed control byte
@@ -153,7 +158,7 @@ void RegisterList::setThrottle(char *s) volatile{
   INTERFACE.print(tDirection);
   INTERFACE.print(F(">"));
   
-  speedTable[nReg]=tDirection==1?tSpeed:-tSpeed;
+  speedTable[nReg]=tSpeed+tDirection*128;
     
 } // RegisterList::setThrottle()
 

@@ -2,7 +2,7 @@
 
 PacketRegister.h
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
-                   2016 Harald Barth
+              2016-2020 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -38,7 +38,7 @@ struct RegisterList{
   byte currentBit;
   byte nRepeat;
   byte debugcount;
-  int *speedTable;
+  byte *speedTable;
   static byte idlePacket[];
   static byte resetPacket[];
   static byte bitMask[];

@@ -2,7 +2,7 @@
 
 DCC++ BASE STATION
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
-              2016-2019 Harald Barth
+              2016-2020 Harald Barth
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
