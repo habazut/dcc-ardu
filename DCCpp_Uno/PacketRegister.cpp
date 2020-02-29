@@ -55,15 +55,13 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
   else
       recycleReg = regMap[nReg];     // remember where the regMap[nReg] that will be invalidated was stored
   regMap[nReg]=newReg;               // set the regMap[nReg] to be updated
+
+/*
   INTERFACE.print(" NewReg= ");
   INTERFACE.print((int)newReg);
   INTERFACE.print(" recycleReg= ");
   INTERFACE.print((int)recycleReg);
-    
-/*
-  if(regMap[nReg]==NULL)              // first time this Register Number has been called
-   regMap[nReg]=maxLoadedReg+1;       // set Register Pointer for this Register Number to next available Register
-*/
+*/    
  
   Register *p=regMap[nReg];           // set Register to be updated
   byte *buf=p->buf;                   // set byte buffer in the Packet to be updated
@@ -73,8 +71,7 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
     b[nBytes]^=b[i];
   nBytes++;                              // increment number of bytes in packet to include checksum byte
       
-/*  buf[0]=0xFF;                        // first  8 bit of 22-bit preamble*/
-  buf[0]=0xFF;                        // second 8 bit of 14-bit preamble
+  buf[0]=0xFF;                        // first  8 bit of 14-bit preamble
   buf[1]=0xFC + bitRead(b[0],7);      // last   6 bit of 14-bit preamble + data start bit + b[0], bit 7
   buf[2]=b[0]<<1;                     // b[0], bits 6-0 + data start bit
   buf[3]=b[1];                        // b[1], all bits
@@ -104,10 +101,10 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
       } // >5 bytes
     } // >4 bytes
   } // >3 bytes
-  buf[8] &= 0xFE;                                       // clear invalid flag on recycleReg
+  buf[8] &= 0xFE;                     // clear invalid flag on this register/packet content
   
   if (recycleReg!=NULL)
-      (recycleReg->buf)[8] |= 0x01;           // set invalid flag on recycleReg
+      (recycleReg->buf)[8] |= 0x01;   // set invalid flag on recycleReg packet content
   nextReg=p;
   this->nRepeat=nRepeat;
   maxLoadedReg=max(maxLoadedReg,nextReg);
