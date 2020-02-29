@@ -40,8 +40,6 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
   Register *newReg = NULL;
   
   nReg=nReg%((maxNumRegs+1));          // force nReg to be between 0 and maxNumRegs, inclusive
-
-  while(nextReg!=NULL);              // pause while there is a Register already waiting to be updated -- nextReg will be reset to NULL by interrupt when prior Register updated fully processed
  
   newReg=maxLoadedReg+1;
   for(loopReg=reg; loopReg <=maxLoadedReg; loopReg++) {
@@ -105,7 +103,11 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
   
   if (recycleReg!=NULL)
       (recycleReg->buf)[8] |= 0x01;   // set invalid flag on recycleReg packet content
+
+  while(nextReg!=NULL)            // busy wait while there is a Register already waiting to be updated
+      INTERFACE.print(".");       // nextReg will be reset to NULL by interrupt when prior Register updated fully processed
   nextReg=p;
+
   this->nRepeat=nRepeat;
   maxLoadedReg=max(maxLoadedReg,nextReg);
   
