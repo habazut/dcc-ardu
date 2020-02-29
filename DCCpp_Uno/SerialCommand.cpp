@@ -64,8 +64,13 @@ void SerialCommand::process(){
        commandString[0] = '\0';
      else if(c=='>')               // end of new command
        parse(commandString);                    
-     else if(strlen(commandString)<MAX_COMMAND_LENGTH)    // if commandString still has space, append character just read from serial line
-	 sprintf(commandString,"%s%c",commandString,c);     // otherwise, character is ignored (but continue to look for '<' or '>')
+     else {
+	 byte l = strlen(commandString);
+	 if(l < MAX_COMMAND_LENGTH) {  // if commandString still has space, append character just read from serial line
+	     commandString[l] = c;
+	     commandString[l+1] = '\0';
+	 }
+     }                                 // otherwise, character is ignored (but continue to look for '<' or '>')
     } // while
   
   #elif COMM_TYPE == 1
