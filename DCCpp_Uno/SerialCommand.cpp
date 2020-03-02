@@ -356,6 +356,32 @@ void SerialCommand::parse(char *com){
      INTERFACE.print(F("<p1>"));
      break;
           
+/***** TURN ON POWER FROM MOTOR SHIELD TO MAIN TRACK  ****/    
+
+    case '2':      // <1>
+/*
+ *    enables power from the motor shield to the main operations and programming tracks
+ *
+ *    returns: <p1>
+ */
+/*     digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);*/
+     digitalWrite(SIGNAL_ENABLE_PIN_MAIN,HIGH);
+     INTERFACE.print(F("<p1>"));
+     break;
+
+/***** TURN ON POWER FROM MOTOR SHIELD TO PROG TRACK  ****/    
+
+    case '3':      // <1>
+/*
+ *    enables power from the motor shield to the main operations and programming tracks
+ *
+ *    returns: <p1>
+ */
+     digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
+/*     digitalWrite(SIGNAL_ENABLE_PIN_MAIN,HIGH);*/
+     INTERFACE.print(F("<p1>"));
+     break;
+
 /***** TURN OFF POWER FROM MOTOR SHIELD TO TRACKS  ****/    
 
     case '0':     // <0>
@@ -570,6 +596,8 @@ void SerialCommand::parse(char *com){
       INTERFACE.println("");
       INTERFACE.print("currentReg: ");
       INTERFACE.print((int)mRegs->currentReg);
+      INTERFACE.print(" recycleReg: ");
+      INTERFACE.print((int)mRegs->recycleReg);
       INTERFACE.print(" maxLoadedReg: ");
       INTERFACE.println((int)mRegs->maxLoadedReg);
       INTERFACE.println(F("Slot:\tReg\tBits"));
@@ -584,6 +612,14 @@ void SerialCommand::parse(char *com){
 	INTERFACE.print((p->buf[8])&0x03,HEX); INTERFACE.print(F("\t"));
 	INTERFACE.println("");
       }
+      INTERFACE.println("");
+      INTERFACE.print("currentReg: ");
+      INTERFACE.print((int)pRegs->currentReg);
+      INTERFACE.print(" recycleReg: ");
+      INTERFACE.print((int)pRegs->recycleReg);
+      INTERFACE.print(" maxLoadedReg: ");
+      INTERFACE.println((int)pRegs->maxLoadedReg);
+      INTERFACE.println(F("Slot:\tReg\tBits"));
       for(Register *p=pRegs->reg;p<=pRegs->maxLoadedReg;p++){
         INTERFACE.print(F("P")); INTERFACE.print((int)(p-pRegs->reg)); INTERFACE.print(F(":\t"));
         INTERFACE.print((int)p); INTERFACE.print(F("\t"));
@@ -591,6 +627,8 @@ void SerialCommand::parse(char *com){
 	for(int i=0;i< p->nBits/8 + (p->nBits%8 ? 1 : 0 ) && i<10;i++){
 	    INTERFACE.print(p->buf[i],HEX); INTERFACE.print(F("\t"));
 	}
+	INTERFACE.print(F("F_"));
+	INTERFACE.print((p->buf[8])&0x03,HEX); INTERFACE.print(F("\t"));
         INTERFACE.println("");
       }
       INTERFACE.println("");

@@ -38,21 +38,26 @@ RegisterList::RegisterList(int maxNumRegs){
 void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int printFlag) volatile {
   Register *loopReg = NULL;
   Register *newReg = NULL;
+  byte of=0;
   
   nReg=nReg%((maxNumRegs+1));          // force nReg to be between 0 and maxNumRegs, inclusive
- 
-  newReg=maxLoadedReg+1;
-  for(loopReg=reg; loopReg <=maxLoadedReg; loopReg++) {
-      if (loopReg == recycleReg) {
-	  newReg = recycleReg;
+
+  if (nReg != 0) {                     // nReg = 0 is the special "direct out" register
+    newReg=maxLoadedReg+1;
+    for(loopReg=reg; loopReg <=maxLoadedReg; loopReg++) {
+        if (loopReg == recycleReg) {
+          newReg = recycleReg;
 	  break;
-      }
-  }
-  if(regMap[nReg]==NULL)
-      recycleReg = NULL;
-  else
-      recycleReg = regMap[nReg];     // remember where the regMap[nReg] that will be invalidated was stored
-  regMap[nReg]=newReg;               // set the regMap[nReg] to be updated
+	}
+    }
+    if(regMap[nReg]==NULL)
+	recycleReg = NULL;
+    else
+	recycleReg = regMap[nReg];    // remember where the regMap[nReg] that will be invalidated was stored
+    regMap[nReg]=newReg;              // set the regMap[nReg] to be updated
+  } else                              // if nReg is 0 then we have to wait here, otherwise we can wait later
+    while(nextReg!=NULL);             // busy wait while there is a Register already waiting to be updated
+/*      INTERFACE.print(".");         // nextReg will be reset to NULL by interrupt when prior Register updated fully processed*/
 
 /*
   INTERFACE.print(" NewReg= ");
@@ -69,30 +74,34 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
     b[nBytes]^=b[i];
   nBytes++;                              // increment number of bytes in packet to include checksum byte
       
-  buf[0]=0xFF;                        // first  8 bit of 14-bit preamble
-  buf[1]=0xFC + bitRead(b[0],7);      // last   6 bit of 14-bit preamble + data start bit + b[0], bit 7
-  buf[2]=b[0]<<1;                     // b[0], bits 6-0 + data start bit
-  buf[3]=b[1];                        // b[1], all bits
-  buf[4]=b[2]>>1;                     // b[2], bits 7-1
-  buf[5]=b[2]<<7;                     // b[2], bit 0
+  if (nBytes <= 5) {
+    of=1;
+    buf[0]=0xFF;                      // first  8 bit of 22-bit preamble
+  }
+  buf[0+of]=0xFF;                        // first  8 bit of 14-bit preamble or second 8 bit of 22-bit preamble
+  buf[1+of]=0xFC + bitRead(b[0],7);      // last   6 bit of 14-bit preamble + data start bit + b[0], bit 7
+  buf[2+of]=b[0]<<1;                     // b[0], bits 6-0 + data start bit
+  buf[3+of]=b[1];                        // b[1], all bits
+  buf[4+of]=b[2]>>1;                     // b[2], bits 7-1
+  buf[5+of]=b[2]<<7;                     // b[2], bit 0
   
   if(nBytes==3){
-    bitSet(buf[5],6);                 // endbit
-    p->nBits=42;
+    bitSet(buf[5+of],6);                 // endbit
+    p->nBits=42+8*of;
   } else{
-    buf[5]+=b[3]>>2;                  // b[3], bits 7-2
-    buf[6]=b[3]<<6;                   // b[3], bit 1-0
+    buf[5+of]+=b[3]>>2;                  // b[3], bits 7-2
+    buf[6+of]=b[3]<<6;                   // b[3], bit 1-0
     if(nBytes==4){
-      bitSet(buf[6],5);               // endbit
-      p->nBits=51;
+      bitSet(buf[6+of],5);               // endbit
+      p->nBits=51+8*of;
     } else{
-      buf[6]+=b[4]>>3;                // b[4], bits 7-3
-      buf[7]=b[4]<<5;                 // b[4], bits 2-0
+      buf[6+of]+=b[4]>>3;                // b[4], bits 7-3
+      buf[7+of]=b[4]<<5;                 // b[4], bits 2-0
       if(nBytes==5){
-	bitSet(buf[7],4);             // endbit
-        p->nBits=60;
+	bitSet(buf[7+of],4);             // endbit
+        p->nBits=60+8*of;
       } else{
-        buf[7]+=b[5]>>4;              // b[5], bits 7-4
+        buf[7+of]+=b[5]>>4;              // b[5], bits 7-4
         buf[8]=b[5]<<4;               // b[5], bits 3-0
 	bitSet(buf[8],3);             // endbit
         p->nBits=69;
@@ -101,17 +110,18 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
   } // >3 bytes
   buf[8] &= 0xFE;                     // clear invalid flag on this register/packet content
   
-  if (recycleReg!=NULL)
+  if (nReg != 0 && recycleReg!=NULL)
       (recycleReg->buf)[8] |= 0x01;   // set invalid flag on recycleReg packet content
 
-  while(nextReg!=NULL)            // busy wait while there is a Register already waiting to be updated
-      INTERFACE.print(".");       // nextReg will be reset to NULL by interrupt when prior Register updated fully processed
+  if (nReg != 0)                    // if nReg was 0 then we waited above
+    while(nextReg!=NULL);           // busy wait while there is a Register already waiting to be updated
+/*      INTERFACE.print(".");       // nextReg will be reset to NULL by interrupt when prior Register updated fully processed*/
   nextReg=p;
 
   this->nRepeat=nRepeat;
   maxLoadedReg=max(maxLoadedReg,nextReg);
   
-  if(printFlag && SHOW_PACKETS)       // for debugging purposes
+/*  if(printFlag && SHOW_PACKETS)       // for debugging purposes*/
     printPacket(nReg,b,nBytes,nRepeat);  
 
 } // RegisterList::loadPacket
@@ -259,18 +269,26 @@ void RegisterList::readCV(char *s) volatile{
     bRead[2]=0xE8+i;  
 
     loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
+    digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
+    loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
+
+    loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
     loadPacket(0,bRead,3,5);                // NMRA recommends 5 verfy packets
-    loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)
+/*    loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)*/
 
     for(int j=0;j<ACK_SAMPLE_COUNT;j++){
-      c=(analogRead(CURRENT_MONITOR_PIN_PROG)-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
+      int current = analogRead(CURRENT_MONITOR_PIN_PROG);
+      INTERFACE.print(c); INTERFACE.print(".");
+      c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
       if(c>ACK_SAMPLE_THRESHOLD)
         d=1;
     }
 
     bitWrite(bValue,i,d);
   }
-    
+  INTERFACE.println(bValue);
+  digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
+
   c=0;
   d=0;
   base=0;
@@ -283,11 +301,17 @@ void RegisterList::readCV(char *s) volatile{
   bRead[2]=bValue;  
 
   loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
+  digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
+  loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
+
+  loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
   loadPacket(0,bRead,3,5);                // NMRA recommends 5 verfy packets
-  loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)
+/*  loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)*/
     
   for(int j=0;j<ACK_SAMPLE_COUNT;j++){
-    c=(analogRead(CURRENT_MONITOR_PIN_PROG)-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
+    int current = analogRead(CURRENT_MONITOR_PIN_PROG);
+    INTERFACE.print(current); INTERFACE.print(",");
+    c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
     if(c>ACK_SAMPLE_THRESHOLD)
       d=1;
   }
@@ -304,6 +328,7 @@ void RegisterList::readCV(char *s) volatile{
   INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
   INTERFACE.print(F(">"));
+  digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
         
 } // RegisterList::readCV()
 
