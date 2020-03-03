@@ -258,53 +258,55 @@ void RegisterList::readCV(char *s) volatile{
   
   bValue=0;
 
-  // power up sequence
+  /* power up sequence */
   digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
   oldPacketCounter=packetsTransmitted;
-  INTERFACE.println(packetsTransmitted);
   loadPacket(1,resetPacket,2,1);
   while (packetsTransmitted < oldPacketCounter + 20); // busy wait
-  INTERFACE.println(packetsTransmitted);
-  
+
+  /* read base current */
+  base=0;
+  for(int j=0;j<ACK_BASE_COUNT;j++)
+    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
+  base/=ACK_BASE_COUNT;
+
   for(int i=0;i<8;i++){
     
     c=0;
     d=0;
-    base=0;
-
-    for(int j=0;j<ACK_BASE_COUNT;j++)
-      base+=analogRead(CURRENT_MONITOR_PIN_PROG);
-    base/=ACK_BASE_COUNT;
 
     bRead[2]=0xE8+i;  
 
     loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-
-    loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-    loadPacket(0,bRead,3,5);                // NMRA recommends 5 verfy packets
+    INTERFACE.println(packetsTransmitted);
+    loadPacket(1,bRead,3,1);                // Start transmitting verify packets (according to NMRA at least 5 
+                                            // but we do it continiously until Ack or timeout
+/*    loadPacket(0,bRead,3,5);                // NMRA recommends 5 verfy packets*/
 /*    loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)*/
 
     for(int j=0;j<ACK_SAMPLE_COUNT;j++){
       int current = analogRead(CURRENT_MONITOR_PIN_PROG);
       INTERFACE.print(c); INTERFACE.print(".");
       c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
-      if(c>ACK_SAMPLE_THRESHOLD)
-        d=1;
+      if(d != 1 && c>ACK_SAMPLE_THRESHOLD) {
+	  d=1;                                 // set flag that we got Ack
+	loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
+	oldPacketCounter = packetsTransmitted; // remember time when we got the Ack
+	INTERFACE.println(packetsTransmitted);
+      }
+      if(d == 1 && packetsTransmitted > oldPacketCounter + 12) { // wait for at least 12 packets after detected Ack
+	break;                              // We have an Ack, we can leave the detection loop
+      }
     }
-
-    bitWrite(bValue,i,d);
-  }
+    loadPacket(1,resetPacket,2,1);          // go back to transmitting reset packets
+    bitWrite(bValue,i,d);                   // write the found bit into bValue
+  }                                         // end loop over bits
   INTERFACE.println(bValue);
 
 /*  digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);*/
 
   c=0;
   d=0;
-  base=0;
-
-  for(int j=0;j<ACK_BASE_COUNT;j++)
-    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
-  base/=ACK_BASE_COUNT;
   
   bRead[0]=0x74+(highByte(cv)&0x03);   // set-up to re-verify entire byte
   bRead[2]=bValue;  
