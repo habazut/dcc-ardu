@@ -29,6 +29,7 @@ struct Register{
   
 struct RegisterList{  
   int maxNumRegs;
+  unsigned long packetsTransmitted;
   Register *reg;
   Register **regMap;
   Register *currentReg;

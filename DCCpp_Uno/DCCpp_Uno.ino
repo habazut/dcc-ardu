@@ -417,6 +417,7 @@ void setup(){
 #define DCC_SIGNAL(R,N) \
   if(R.currentBit==R.currentReg->nBits) {    /* IF no more bits in this DCC Packet */ \
     (R.currentReg->buf)[8] &= 0xFD;          /* Clear busy bit of register */   \
+    R.packetsTransmitted++;                  /* One more packet out 100% */ \
     R.currentBit=0;                          /*   reset current bit pointer and determine which Register and Packet to process next--- */ \
     if(R.nRepeat>0 && R.currentReg==R.reg) { /*   IF current Register is first Register AND should be repeated */ \
       R.nRepeat--;                           /*     decrement repeat count; result is this same Packet will be repeated */ \

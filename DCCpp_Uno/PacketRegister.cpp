@@ -16,6 +16,7 @@ Part of DCC++ BASE STATION for the Arduino
     
 RegisterList::RegisterList(int maxNumRegs){
   this->maxNumRegs=maxNumRegs;
+  packetsTransmitted = 0;
   reg=(Register *)calloc((maxNumRegs+1),sizeof(Register));
   regMap=(Register **)calloc((maxNumRegs+1),sizeof(Register *));
   speedTable=(byte *)calloc((maxNumRegs+1),sizeof(byte));
@@ -246,6 +247,7 @@ void RegisterList::readCV(char *s) volatile{
   int bValue;
   int c,d,base;
   int cv, callBack, callBackSub;
+  long int oldPacketCounter;
 
   if(sscanf(s,"%d %d %d",&cv,&callBack,&callBackSub)!=3)          // cv = 1-1024
     return;    
@@ -255,6 +257,14 @@ void RegisterList::readCV(char *s) volatile{
   bRead[1]=lowByte(cv);
   
   bValue=0;
+
+  // power up sequence
+  digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
+  oldPacketCounter=packetsTransmitted;
+  INTERFACE.println(packetsTransmitted);
+  loadPacket(1,resetPacket,2,1);
+  while (packetsTransmitted < oldPacketCounter + 20); // busy wait
+  INTERFACE.println(packetsTransmitted);
   
   for(int i=0;i<8;i++){
     
@@ -268,8 +278,6 @@ void RegisterList::readCV(char *s) volatile{
 
     bRead[2]=0xE8+i;  
 
-    loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-    digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
     loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
 
     loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
@@ -287,7 +295,8 @@ void RegisterList::readCV(char *s) volatile{
     bitWrite(bValue,i,d);
   }
   INTERFACE.println(bValue);
-  digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
+
+/*  digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);*/
 
   c=0;
   d=0;
@@ -300,9 +309,11 @@ void RegisterList::readCV(char *s) volatile{
   bRead[0]=0x74+(highByte(cv)&0x03);   // set-up to re-verify entire byte
   bRead[2]=bValue;  
 
+/*
   loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
   digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
   loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
+*/
 
   loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
   loadPacket(0,bRead,3,5);                // NMRA recommends 5 verfy packets
@@ -315,6 +326,8 @@ void RegisterList::readCV(char *s) volatile{
     if(c>ACK_SAMPLE_THRESHOLD)
       d=1;
   }
+
+  loadPacket(1,resetPacket,2,1);         // put idle packet back into slot 1
     
   if(d==0)    // verify unsuccessful
     bValue=-1;
