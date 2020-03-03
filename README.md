@@ -16,9 +16,10 @@ To utilize this sketch, simply download a zip file of this repository and open t
 
 The version on the Master branch is currently 1.2.1haba1:
 
-* Supports both the Arduino Uno and Arduino Mega
+* Supports both the Arduino Uno and Arduino Mega (Mega untested)
 * Built-in configuration for both the original Arduino Motor Shield as well as a Pololu MC33926 Motor Shield
-* Built-in configuration and support of Ethernet Shields (for use with Mega only)
+* Built-in configuration and support of Ethernet Shields (for use with Mega only, untested)
+* Programming in Service mode is currently definitely not working on the 1.2.1haba1 release. It was sketchy at best in the origial DCC++ project because of timing issues.
 
 For more information on the overall DCC++ system, please follow the links in the PDF file.
 
