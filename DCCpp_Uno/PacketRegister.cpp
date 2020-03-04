@@ -239,6 +239,41 @@ void RegisterList::writeTextPacket(char *s) volatile{
   loadPacket(nReg,b,nBytes,0,1);
     
 } // RegisterList::writeTextPacket()
+
+///////////////////////////////////////////////////////////////////////////////
+
+int RegisterList::ackdetect(int base) volatile{
+    int d = 0;
+    int c = 0;
+    int current;
+    long int oldPacketCounter;
+
+    oldPacketCounter = packetsTransmitted; // remember time when we started
+    for(int j=0;j<ACK_SAMPLE_COUNT;j++){
+      int current = analogRead(CURRENT_MONITOR_PIN_PROG);
+      INTERFACE.print(c); INTERFACE.print(".");
+      c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
+      if(d != 1 ) {
+        if (c>ACK_SAMPLE_THRESHOLD) {
+	  d=1;                                   // set flag that we got Ack
+	  loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
+	  oldPacketCounter = packetsTransmitted; // remember time when we got the Ack
+	  INTERFACE.print(packetsTransmitted);INTERFACE.print("~");
+	}
+	if (packetsTransmitted > oldPacketCounter + 9) { // Timeout: Wait for 3 reset, 5 vrfy and one extra packet time
+	  INTERFACE.print(packetsTransmitted); INTERFACE.print("v");
+	  break;                            // timeout, no Ack found
+	}
+      } else {                              // d == 1
+        if(packetsTransmitted > oldPacketCounter + 2) { // wait for at least 5 packets after detected Ack
+	  INTERFACE.print(packetsTransmitted);INTERFACE.print("^");
+	  break;                              // We have an Ack, we can leave the detection loop
+	}
+      }
+    }
+    loadPacket(1,resetPacket,2,1);          // go back to transmitting reset packets
+    return d;
+}
   
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -284,21 +319,7 @@ void RegisterList::readCV(char *s) volatile{
 /*    loadPacket(0,bRead,3,5);                // NMRA recommends 5 verfy packets*/
 /*    loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)*/
 
-    for(int j=0;j<ACK_SAMPLE_COUNT;j++){
-      int current = analogRead(CURRENT_MONITOR_PIN_PROG);
-      INTERFACE.print(c); INTERFACE.print(".");
-      c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
-      if(d != 1 && c>ACK_SAMPLE_THRESHOLD) {
-	  d=1;                                 // set flag that we got Ack
-	loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
-	oldPacketCounter = packetsTransmitted; // remember time when we got the Ack
-	INTERFACE.println(packetsTransmitted);
-      }
-      if(d == 1 && packetsTransmitted > oldPacketCounter + 12) { // wait for at least 12 packets after detected Ack
-	break;                              // We have an Ack, we can leave the detection loop
-      }
-    }
-    loadPacket(1,resetPacket,2,1);          // go back to transmitting reset packets
+    d = ackdetect(base);
     bitWrite(bValue,i,d);                   // write the found bit into bValue
   }                                         // end loop over bits
   INTERFACE.println(bValue);
@@ -318,9 +339,11 @@ void RegisterList::readCV(char *s) volatile{
 */
 
   loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-  loadPacket(0,bRead,3,5);                // NMRA recommends 5 verfy packets
+  loadPacket(1,bRead,3,1);                // FOOO NMRA recommends 5 verfy packets
 /*  loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)*/
-    
+
+  d=ackdetect(base);
+/*
   for(int j=0;j<ACK_SAMPLE_COUNT;j++){
     int current = analogRead(CURRENT_MONITOR_PIN_PROG);
     INTERFACE.print(current); INTERFACE.print(",");
@@ -330,10 +353,9 @@ void RegisterList::readCV(char *s) volatile{
   }
 
   loadPacket(1,resetPacket,2,1);         // put idle packet back into slot 1
-    
+*/
   if(d==0)    // verify unsuccessful
     bValue=-1;
-
   INTERFACE.print(F("<r"));
   INTERFACE.print(callBack);
   INTERFACE.print(F("|"));
