@@ -242,6 +242,8 @@ void RegisterList::writeTextPacket(char *s) volatile{
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/* ackdetect side-effect: Will restore resetPacket to slot 1 */
+
 int RegisterList::ackdetect(int base) volatile{
     int d = 0;
     int c = 0;
@@ -249,28 +251,30 @@ int RegisterList::ackdetect(int base) volatile{
     long int oldPacketCounter;
 
     oldPacketCounter = packetsTransmitted; // remember time when we started
-    for(int j=0;j<ACK_SAMPLE_COUNT;j++){
+    for(int j=0;j<ACK_SAMPLE_COUNT;j++){  /* XXX remove ACK_SAMPLE_COUNT ?? */
       int current = analogRead(CURRENT_MONITOR_PIN_PROG);
       INTERFACE.print(c); INTERFACE.print(".");
-      c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
+      c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING); /* XXX this does not do what the standard says */
       if(d != 1 ) {
         if (c>ACK_SAMPLE_THRESHOLD) {
 	  d=1;                                   // set flag that we got Ack
 	  loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
-	  oldPacketCounter = packetsTransmitted; // remember time when we got the Ack
+	  oldPacketCounter = packetsTransmitted; // remember time when we got the Ack, leave loop below later
 	  INTERFACE.print(packetsTransmitted);INTERFACE.print("~");
 	}
-	if (packetsTransmitted > oldPacketCounter + 9) { // Timeout: Wait for 3 reset, 5 vrfy and one extra packet time
+	if (packetsTransmitted >= oldPacketCounter + 9) { // Timeout: Wait for 3 reset, 5 vrfy and one extra packet time
+          loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
 	  INTERFACE.print(packetsTransmitted); INTERFACE.print("v");
-	  break;                            // timeout, no Ack found
+	  return d;                              // timeout, no Ack found
 	}
-      } else {                              // d == 1
-        if(packetsTransmitted > oldPacketCounter + 2) { // wait for at least 5 packets after detected Ack
+      } else {                                   // d == 1
+        if(packetsTransmitted >= oldPacketCounter + 3) { // wait for at least 3 packets after detected Ack
 	  INTERFACE.print(packetsTransmitted);INTERFACE.print("^");
-	  break;                              // We have an Ack, we can leave the detection loop
+	  return d;                              // We have an Ack, we can leave the detection loop
 	}
       }
     }
+    /* should never reach here but as a safe guard leave this */
     loadPacket(1,resetPacket,2,1);          // go back to transmitting reset packets
     return d;
 }
@@ -280,7 +284,7 @@ int RegisterList::ackdetect(int base) volatile{
 void RegisterList::readCV(char *s) volatile{
   byte bRead[4];
   int bValue;
-  int c,d,base;
+  int c,d,base; /* XXX c should go */
   int cv, callBack, callBackSub;
   long int oldPacketCounter;
 
@@ -293,7 +297,7 @@ void RegisterList::readCV(char *s) volatile{
   
   bValue=0;
 
-  /* power up sequence */
+  /* power up sequence */ /* XXX here we should check if we are on and then remember if we need to turn off */
   digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
   oldPacketCounter=packetsTransmitted;
   loadPacket(1,resetPacket,2,1);
