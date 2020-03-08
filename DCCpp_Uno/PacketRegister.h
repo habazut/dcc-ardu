@@ -45,6 +45,8 @@ struct RegisterList{
   static byte bitMask[];
   RegisterList(int);
   byte ackdetect(int) volatile;
+  byte poweron() volatile;
+  int readBaseCurrent() volatile;
   void loadPacket(int, byte *, int, int, int=0) volatile;
   void setThrottle(char *) volatile;
   void setFunction(char *) volatile;  

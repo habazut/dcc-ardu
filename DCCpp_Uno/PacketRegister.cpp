@@ -302,13 +302,36 @@ byte RegisterList::ackdetect(int base) volatile{
   
 ///////////////////////////////////////////////////////////////////////////////
 
+byte RegisterList::poweron() volatile {
+  byte turnoff = 0;
+  unsigned long oldPacketCounter;
+  /* power up sequence */
+  if (digitalRead(SIGNAL_ENABLE_PIN_PROG) == LOW) {
+    turnoff = 1;
+    digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
+    oldPacketCounter=packetsTransmitted;
+    loadPacket(1,resetPacket,2,1);
+    while ((unsigned long)(packetsTransmitted - oldPacketCounter) < 20); // busy wait
+  }
+  return turnoff;
+}
+
+int RegisterList::readBaseCurrent() volatile {
+  int base=0;
+  /* read base current */
+  for(int j=0;j<ACK_BASE_COUNT;j++)
+    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
+  base/=ACK_BASE_COUNT;
+  return base;
+}
+
 void RegisterList::readCV(char *s) volatile{
   byte bRead[4];
   int bValue;
   byte d;                            // tmp var for holding ackdetect answer
   int base;                          // measured base current before ack
   int cv, callBack, callBackSub;
-  unsigned long oldPacketCounter;
+  byte turnoff;                      // need to turn off power again
 
   if(sscanf(s,"%d %d %d",&cv,&callBack,&callBackSub)!=3)          // cv = 1-1024
     return;    
@@ -319,17 +342,8 @@ void RegisterList::readCV(char *s) volatile{
   
   bValue=0;
 
-  /* power up sequence */ /* XXX here we should check if we are on and then remember if we need to turn off */
-  digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
-  oldPacketCounter=packetsTransmitted;
-  loadPacket(1,resetPacket,2,1);
-  while ((unsigned long)(packetsTransmitted - oldPacketCounter) < 20); // busy wait
-
-  /* read base current */
-  base=0;
-  for(int j=0;j<ACK_BASE_COUNT;j++)
-    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
-  base/=ACK_BASE_COUNT;
+  turnoff = poweron();
+  base=readBaseCurrent();
 
   for(int i=0;i<8;i++){                     // check all 8 bits
     bRead[2]=0xE8+i;  
@@ -361,7 +375,8 @@ void RegisterList::readCV(char *s) volatile{
   INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
   INTERFACE.print(F(">"));
-  digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
+  if (turnoff)
+    digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
         
 } // RegisterList::readCV()
 
