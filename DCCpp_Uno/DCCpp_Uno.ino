@@ -325,7 +325,7 @@ void setup(){
   bitClear(TCCR0B,CS02);    // set Timer 0 prescale=64
   bitSet(TCCR0B,CS01);
   bitSet(TCCR0B,CS00);
-    
+
   OCR0A=DCC_ONE_BIT_TOTAL_DURATION_TIMER0;
   OCR0B=DCC_ONE_BIT_PULSE_DURATION_TIMER0;
   

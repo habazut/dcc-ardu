@@ -17,8 +17,8 @@ Part of DCC++ BASE STATION for the Arduino
 
 #define  ACK_BASE_COUNT            100      // number of analogRead samples to take before each CV verify to establish a baseline current
 #define  ACK_SAMPLE_COUNT         2000      // number of analogRead samples to take when monitoring current after a CV verify (bit or byte) has been sent 
-#define  ACK_SAMPLE_SMOOTHING      0.2      // exponential smoothing to use in processing the analogRead samples after a CV verify (bit or byte) has been sent
-#define  ACK_SAMPLE_THRESHOLD       30      // the threshold that the exponentially-smoothed analogRead samples (after subtracting the baseline current) must cross to establish ACKNOWLEDGEMENT
+#define  ACK_SAMPLE_SMOOTHING      0.7      // exponential smoothing to use in processing the analogRead samples after a CV verify (bit or byte) has been sent
+#define  ACK_SAMPLE_THRESHOLD       60      // the threshold that the exponentially-smoothed analogRead samples (after subtracting the baseline current) must cross to establish ACKNOWLEDGEMENT
 
 // Define a series of registers that can be sequentially accessed over a loop to generate a repeating series of DCC Packets
 
@@ -44,7 +44,7 @@ struct RegisterList{
   static byte resetPacket[];
   static byte bitMask[];
   RegisterList(int);
-  int ackdetect(int) volatile;
+  byte ackdetect(int) volatile;
   void loadPacket(int, byte *, int, int, int=0) volatile;
   void setThrottle(char *) volatile;
   void setFunction(char *) volatile;  

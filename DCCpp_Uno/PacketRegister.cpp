@@ -122,7 +122,7 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
   this->nRepeat=nRepeat;
   maxLoadedReg=max(maxLoadedReg,nextReg);
   
-/*  if(printFlag && SHOW_PACKETS)       // for debugging purposes*/
+  if(printFlag && SHOW_PACKETS)       // for debugging purposes
     printPacket(nReg,b,nBytes,nRepeat);  
 
 } // RegisterList::loadPacket
@@ -244,49 +244,60 @@ void RegisterList::writeTextPacket(char *s) volatile{
 
 /* ackdetect side-effect: Will restore resetPacket to slot 1 */
 
-int RegisterList::ackdetect(int base) volatile{
-    int d = 0;
+byte RegisterList::ackdetect(int base) volatile{
+    byte upflankFound = 0;
+    byte ackFound = 0;
     int c = 0;
-    int f = 1;
+    byte searchLowflank = 1;
     int current;
-    long int oldPacketCounter;
+    unsigned long acktime, lowflankMicros, upflankMicros;
+    unsigned long oldPacketCounter;
     long int opc;  /* Only used for debugging, remove later */
 
     opc = oldPacketCounter = packetsTransmitted; // remember time when we started
     for(int j=0;j<ACK_SAMPLE_COUNT;j++){  /* XXX remove ACK_SAMPLE_COUNT ?? */
       int current = analogRead(CURRENT_MONITOR_PIN_PROG);
       if (opc != packetsTransmitted) {
-	  INTERFACE.print(packetsTransmitted); INTERFACE.print("X");
+	  INTERFACE.print(packetsTransmitted); INTERFACE.print(":");
 	  opc = packetsTransmitted;
       }
       INTERFACE.print(current-base); INTERFACE.print(".");
       c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING); /* XXX this does not do what the standard says */
-      if(d != 1 ) {
+      if(upflankFound != 1 ) {
         if (c>ACK_SAMPLE_THRESHOLD) {
-	  d=1;                                   // set flag that we got Ack
-	  loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
-	  oldPacketCounter = packetsTransmitted; // remember time when we got the Ack, leave loop below later
-	  INTERFACE.print(packetsTransmitted);INTERFACE.print("~");
+	  upflankFound=1;                                  // upflank found, set flag
+	  upflankMicros=micros();                          // remember time when we got the upflank
+	  INTERFACE.print("^");
 	}
-	if (packetsTransmitted >= oldPacketCounter + 9) { // Timeout: Wait for 3 reset, 5 vrfy and one extra packet time
-          loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
-	  INTERFACE.print(packetsTransmitted); INTERFACE.print("v");
-	  return d;                              // timeout, no Ack found
+      } else {                                             // upflankFound == 1
+        if (searchLowflank && c<ACK_SAMPLE_THRESHOLD) {    // lowflank found
+	  lowflankMicros = micros();
+	  searchLowflank= 0;
+	  acktime = (unsigned long)(lowflankMicros - upflankMicros);
+	  INTERFACE.print("v"); INTERFACE.print(acktime); INTERFACE.print("v");
+	  if (acktime < 36000 || acktime > 56000) {
+	    upflankFound = 0;
+	    searchLowflank = 1;
+	  } else {
+	    ackFound = 1;
+	    loadPacket(1,resetPacket,2,1);                   // go back to transmitting reset packets
+	    oldPacketCounter = packetsTransmitted;           // remember time when we got the Ack, leave loop below later
+	  }
 	}
-      } else {                                   // d == 1
-        if (c<ACK_SAMPLE_THRESHOLD && f) {
-	    f = 0;
-	    INTERFACE.print(packetsTransmitted); INTERFACE.print("o");
-	}
-        if(packetsTransmitted >= oldPacketCounter + 3) { // wait for at least 3 packets after detected Ack
-	  INTERFACE.print(packetsTransmitted);INTERFACE.print("^");
-	  return d;                              // We have an Ack, we can leave the detection loop
-	}
+      }
+      if(ackFound && (unsigned long)(packetsTransmitted - oldPacketCounter) >= 3) { // wait for at least 3 packets after detected Ack
+        INTERFACE.print(packetsTransmitted);INTERFACE.print("!");
+	return 1;                                       // We had an Ack 3 pkt ago, we can leave the detection loop
+      }
+      if ((unsigned long)(packetsTransmitted - oldPacketCounter) >= 9) { // Timeout: Wait for 3 reset, 5 vrfy and one extra packet time
+        loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
+	INTERFACE.print(packetsTransmitted); INTERFACE.print("X");
+	return ackFound;                              // timeout, maybe no Ack found
       }
     }
     /* should never reach here but as a safe guard leave this */
     loadPacket(1,resetPacket,2,1);          // go back to transmitting reset packets
-    return d;
+    return 0;
 }
   
 ///////////////////////////////////////////////////////////////////////////////
@@ -294,9 +305,10 @@ int RegisterList::ackdetect(int base) volatile{
 void RegisterList::readCV(char *s) volatile{
   byte bRead[4];
   int bValue;
-  int c,d,base; /* XXX c should go */
+  byte d;                            // tmp var for holding ackdetect answer
+  int base;                          // measured base current before ack
   int cv, callBack, callBackSub;
-  long int oldPacketCounter;
+  unsigned long oldPacketCounter;
 
   if(sscanf(s,"%d %d %d",&cv,&callBack,&callBackSub)!=3)          // cv = 1-1024
     return;    
@@ -311,7 +323,7 @@ void RegisterList::readCV(char *s) volatile{
   digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
   oldPacketCounter=packetsTransmitted;
   loadPacket(1,resetPacket,2,1);
-  while (packetsTransmitted < oldPacketCounter + 20); // busy wait
+  while ((unsigned long)(packetsTransmitted - oldPacketCounter) < 20); // busy wait
 
   /* read base current */
   base=0;
@@ -319,11 +331,7 @@ void RegisterList::readCV(char *s) volatile{
     base+=analogRead(CURRENT_MONITOR_PIN_PROG);
   base/=ACK_BASE_COUNT;
 
-  for(int i=0;i<8;i++){
-    
-    c=0;
-    d=0;
-
+  for(int i=0;i<8;i++){                     // check all 8 bits
     bRead[2]=0xE8+i;  
 
     loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
@@ -335,15 +343,12 @@ void RegisterList::readCV(char *s) volatile{
   }                                         // end loop over bits
   INTERFACE.println(bValue);
 
-  c=0;
-  d=0;
-  
-  bRead[0]=0x74+(highByte(cv)&0x03);   // set-up to re-verify entire byte
+  bRead[0]=0x74+(highByte(cv)&0x03);      // set-up to re-verify entire byte
   bRead[2]=bValue;  
   loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
   loadPacket(1,bRead,3,1);                // Start transmitting verify packets (according to NMRA at least 5 
                                           // but we do it continiously until Ack or timeout
-  d=ackdetect(base);
+  d = ackdetect(base);
 
   if(d==0)    // verify unsuccessful
     bValue=-1;
