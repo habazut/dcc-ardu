@@ -275,7 +275,7 @@ byte RegisterList::ackdetect(int base) volatile{
 	  searchLowflank= 0;
 	  acktime = (unsigned long)(lowflankMicros - upflankMicros);
 	  INTERFACE.print("v"); INTERFACE.print(acktime); INTERFACE.print("v");
-	  if (acktime < 36000 || acktime > 56000) {
+	  if (acktime < 30000 || acktime > 56000) {        // this is way to wide but let go for now
 	    upflankFound = 0;
 	    searchLowflank = 1;
 	  } else {
@@ -312,6 +312,8 @@ byte RegisterList::poweron() volatile {
     oldPacketCounter=packetsTransmitted;
     loadPacket(1,resetPacket,2,1);
     while ((unsigned long)(packetsTransmitted - oldPacketCounter) < 20); // busy wait
+  } else {
+    loadPacket(1,resetPacket,2,1);
   }
   return turnoff;
 }
@@ -384,6 +386,7 @@ void RegisterList::readCV(char *s) volatile{
 
 void RegisterList::writeCVByte(char *s) volatile{
   byte bWrite[4];
+  byte turnoff;
   int bValue;
   int c,d,base;
   int cv, callBack, callBackSub;
@@ -391,36 +394,22 @@ void RegisterList::writeCVByte(char *s) volatile{
   if(sscanf(s,"%d %d %d %d",&cv,&bValue,&callBack,&callBackSub)!=4)          // cv = 1-1024
     return;    
   cv--;                              // actual CV addresses are cv-1 (0-1023)
+
+  turnoff = poweron();
+  base=readBaseCurrent();
   
   bWrite[0]=0x7C+(highByte(cv)&0x03);   // any CV>1023 will become modulus(1024) due to bit-mask of 0x03
   bWrite[1]=lowByte(cv);
   bWrite[2]=bValue;
+  loadPacket(1,bWrite,3,1);
+  d = ackdetect(base);
 
-  loadPacket(0,resetPacket,2,1);
-  loadPacket(0,bWrite,3,4);
-  loadPacket(0,resetPacket,2,1);
-  loadPacket(0,idlePacket,2,10);
-
-  c=0;
-  d=0;
-  base=0;
-
-  for(int j=0;j<ACK_BASE_COUNT;j++)
-    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
-  base/=ACK_BASE_COUNT;
-  
-  bWrite[0]=0x74+(highByte(cv)&0x03);   // set-up to re-verify entire byte
-
-  loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-  loadPacket(0,bWrite,3,5);               // NMRA recommends 5 verfy packets
-  loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)
-    
-  for(int j=0;j<ACK_SAMPLE_COUNT;j++){
-    c=(analogRead(CURRENT_MONITOR_PIN_PROG)-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
-    if(c>ACK_SAMPLE_THRESHOLD)
-      d=1;
+  if (d == 0) { // we did not get ack on the write, try do do a traditional verify
+    bWrite[0]=0x74+(highByte(cv)&0x03);   // set-up to re-verify entire byte
+    loadPacket(1,bWrite,3,1);
+    d = ackdetect(base);
   }
-    
+
   if(d==0)    // verify unsuccessful
     bValue=-1;
 
@@ -433,6 +422,8 @@ void RegisterList::writeCVByte(char *s) volatile{
   INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
   INTERFACE.print(F(">"));
+  if (turnoff)
+    digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
 
 } // RegisterList::writeCVByte()
   
