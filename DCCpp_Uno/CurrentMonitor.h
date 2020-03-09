@@ -17,9 +17,9 @@ Part of DCC++ BASE STATION for the Arduino
 #define  CURRENT_SAMPLE_MAX         300
 
 #ifdef ARDUINO_AVR_UNO                        // Configuration for UNO
-  #define  CURRENT_SAMPLE_TIME        10
+  #define  CURRENT_SAMPLE_TIME        20
 #else                                         // Configuration for MEGA    
-  #define  CURRENT_SAMPLE_TIME        1
+  #define  CURRENT_SAMPLE_TIME        2
 #endif
 
 struct CurrentMonitor{

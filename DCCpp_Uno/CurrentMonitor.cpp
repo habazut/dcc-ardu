@@ -20,19 +20,25 @@ CurrentMonitor::CurrentMonitor(int pin, const char *msg){
     current=0;
   } // CurrentMonitor::CurrentMonitor
   
+/* Note: millis() uses TIMER-0.  For UNO, we change the scale on Timer-0. */
+/* For MEGA we do not.  This means millis() on the UNO is approx 8 to 10  */
+/* times too fast (actual scale depending on DCC packet output) and       */
+/* CURENT_SAMPLE_TIME is different for UNO than MEGA to compensate        */
+
 boolean CurrentMonitor::checkTime(){
-  if(millis()-sampleTime<CURRENT_SAMPLE_TIME)            // no need to check current yet
+  unsigned long now;
+  now = millis();
+  if((unsigned long)(now-sampleTime) < CURRENT_SAMPLE_TIME)            // no need to check current yet
     return(false);
-  sampleTime=millis();                                   // note millis() uses TIMER-0.  For UNO, we change the scale on Timer-0.  For MEGA we do not.  This means CURENT_SAMPLE_TIME is different for UNO then MEGA
+  sampleTime=now;
   return(true);  
 } // CurrentMonitor::checkTime
   
 void CurrentMonitor::check(){
   current=analogRead(pin)*CURRENT_SAMPLE_SMOOTHING+current*(1.0-CURRENT_SAMPLE_SMOOTHING);        // compute new exponentially-smoothed current
-  if(current>CURRENT_SAMPLE_MAX && digitalRead(SIGNAL_ENABLE_PIN_PROG)==HIGH){                    // current overload and Prog Signal is on (or could have checked Main Signal, since both are always on or off together)
-    digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);                                                     // disable both Motor Shield Channels
-    digitalWrite(SIGNAL_ENABLE_PIN_MAIN,LOW);                                                     // regardless of which caused current overload
-    INTERFACE.print(msg);                                                                            // print corresponding error message
+  if(current>CURRENT_SAMPLE_MAX && digitalRead(pin)==HIGH){                                       // current overload and pin is on
+    digitalWrite(pin,LOW);                                                                        // disable pin in question
+    INTERFACE.print(msg);                                                                         // print corresponding error message
   }    
 } // CurrentMonitor::check  
 
