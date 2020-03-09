@@ -14,7 +14,8 @@ Part of DCC++ BASE STATION for the Arduino
 
 ///////////////////////////////////////////////////////////////////////////////
     
-RegisterList::RegisterList(int maxNumRegs){
+RegisterList::RegisterList(int maxNumRegs, byte isProgReg){
+  this->isProgReg=isProgReg;
   this->maxNumRegs=maxNumRegs;
   packetsTransmitted = 0;
   reg=(Register *)calloc((maxNumRegs+1),sizeof(Register));
@@ -75,12 +76,12 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
     b[nBytes]^=b[i];
   nBytes++;                              // increment number of bytes in packet to include checksum byte
       
-  if (nBytes <= 5) {
-    of=1;
-    buf[0]=0xFF;                      // first  8 bit of 22-bit preamble
+  if (isProgReg && nBytes <= 5) {        // service mode programming (progRegs) need long preamble 
+    of=1;                                // all service mode commands _should_ be <= 5 bytes
+    buf[0]=0xFF;                         // first  8 bit of 22-bit preamble
   }
   buf[0+of]=0xFF;                        // first  8 bit of 14-bit preamble or second 8 bit of 22-bit preamble
-  buf[1+of]=0xFC + bitRead(b[0],7);      // last   6 bit of 14-bit preamble + data start bit + b[0], bit 7
+  buf[1+of]=0xFC + bitRead(b[0],7);      // last   6 bit of preamble + data start bit + b[0], bit 7
   buf[2+of]=b[0]<<1;                     // b[0], bits 6-0 + data start bit
   buf[3+of]=b[1];                        // b[1], all bits
   buf[4+of]=b[2]>>1;                     // b[2], bits 7-1
@@ -298,25 +299,30 @@ byte RegisterList::ackdetect(int base) volatile{
     /* should never reach here but as a safe guard leave this */
     loadPacket(1,resetPacket,2,1);          // go back to transmitting reset packets
     return 0;
-}
+} // RegisterList::ackdetect(int)
   
 ///////////////////////////////////////////////////////////////////////////////
 
+/* power up sequence: Check if we need to turn on rail power and if we do */
+/* tell caller so that caller can turn off rail power later               */
+
 byte RegisterList::poweron() volatile {
   byte turnoff = 0;
+  byte numpackets = 3;                                   // 3 packets default wait
   unsigned long oldPacketCounter;
-  /* power up sequence */
+
   if (digitalRead(SIGNAL_ENABLE_PIN_PROG) == LOW) {
     turnoff = 1;
+    numpackets = 20;                                     // 20 packets poweron wait
     digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
-    oldPacketCounter=packetsTransmitted;
-    loadPacket(1,resetPacket,2,1);
-    while ((unsigned long)(packetsTransmitted - oldPacketCounter) < 20); // busy wait
-  } else {
-    loadPacket(1,resetPacket,2,1);
   }
+  oldPacketCounter=packetsTransmitted;
+  loadPacket(1,resetPacket,2,1);
+  while ((unsigned long)(packetsTransmitted - oldPacketCounter) < numpackets); // busy wait
   return turnoff;
-}
+} // RegisterList::poweron()
+
+///////////////////////////////////////////////////////////////////////////////
 
 int RegisterList::readBaseCurrent() volatile {
   int base=0;
@@ -325,7 +331,7 @@ int RegisterList::readBaseCurrent() volatile {
     base+=analogRead(CURRENT_MONITOR_PIN_PROG);
   base/=ACK_BASE_COUNT;
   return base;
-}
+} // RegisterList::readBaseCurrent()
 
 void RegisterList::readCV(char *s) volatile{
   byte bRead[4];
@@ -351,8 +357,7 @@ void RegisterList::readCV(char *s) volatile{
     bRead[2]=0xE8+i;  
 
     loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-    INTERFACE.println(packetsTransmitted);
-    loadPacket(1,bRead,3,1);                // Start transmitting verify packets (according to NMRA at least 5 
+    loadPacket(1,bRead,3,1);                // Start transmitting verify packets (according to NMRA at least 5 )
                                             // but we do it continiously until Ack or timeout
     d = ackdetect(base);
     bitWrite(bValue,i,d);                   // write the found bit into bValue
@@ -388,7 +393,8 @@ void RegisterList::writeCVByte(char *s) volatile{
   byte bWrite[4];
   byte turnoff;
   int bValue;
-  int c,d,base;
+  byte d;
+  int base;
   int cv, callBack, callBackSub;
 
   if(sscanf(s,"%d %d %d %d",&cv,&bValue,&callBack,&callBackSub)!=4)          // cv = 1-1024
@@ -431,43 +437,33 @@ void RegisterList::writeCVByte(char *s) volatile{
 
 void RegisterList::writeCVBit(char *s) volatile{
   byte bWrite[4];
+  byte turnoff;
   int bNum,bValue;
-  int c,d,base;
+  byte d;
+  int base;
   int cv, callBack, callBackSub;
 
   if(sscanf(s,"%d %d %d %d %d",&cv,&bNum,&bValue,&callBack,&callBackSub)!=5)          // cv = 1-1024
     return;    
   cv--;                              // actual CV addresses are cv-1 (0-1023)
+
+  turnoff = poweron();
+  base=readBaseCurrent();
+
   bValue=bValue%2;
   bNum=bNum%8;
-  
-  bWrite[0]=0x78+(highByte(cv)&0x03);   // any CV>1023 will become modulus(1024) due to bit-mask of 0x03
+  bWrite[0]=0x78+(highByte(cv)&0x03);    // any CV>1023 will become modulus(1024) due to bit-mask of 0x03
   bWrite[1]=lowByte(cv);  
   bWrite[2]=0xF0+bValue*8+bNum;
+  loadPacket(1,bWrite,3,1);
+  d = ackdetect(base);
 
-  loadPacket(0,resetPacket,2,1);
-  loadPacket(0,bWrite,3,4);
-  loadPacket(0,resetPacket,2,1);
-  loadPacket(0,idlePacket,2,10);
-
-  c=0;
-  d=0;
-  base=0;
-
-  for(int j=0;j<ACK_BASE_COUNT;j++)
-    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
-  base/=ACK_BASE_COUNT;
+  if (d == 0) {                          // did not get ack from write and need to verify
   
-  bitClear(bWrite[2],4);              // change instruction code from Write Bit to Verify Bit
+    bitClear(bWrite[2],4);               // change instruction code from Write Bit to Verify Bit
 
-  loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-  loadPacket(0,bWrite,3,5);               // NMRA recommends 5 verfy packets
-  loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)
-    
-  for(int j=0;j<ACK_SAMPLE_COUNT;j++){
-    c=(analogRead(CURRENT_MONITOR_PIN_PROG)-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
-    if(c>ACK_SAMPLE_THRESHOLD)
-      d=1;
+    loadPacket(1,bWrite,3,1);
+    d = ackdetect(base);
   }
     
   if(d==0)    // verify unsuccessful
@@ -484,6 +480,8 @@ void RegisterList::writeCVBit(char *s) volatile{
   INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
   INTERFACE.print(F(">"));
+  if (turnoff)
+    digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
 
 } // RegisterList::writeCVBit()
   

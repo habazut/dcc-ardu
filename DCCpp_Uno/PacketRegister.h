@@ -29,6 +29,7 @@ struct Register{
   
 struct RegisterList{  
   int maxNumRegs;
+  byte isProgReg;
   unsigned long packetsTransmitted;
   Register *reg;
   Register **regMap;
@@ -43,7 +44,7 @@ struct RegisterList{
   static byte idlePacket[];
   static byte resetPacket[];
   static byte bitMask[];
-  RegisterList(int);
+    RegisterList(int, byte=0);
   byte ackdetect(int) volatile;
   byte poweron() volatile;
   int readBaseCurrent() volatile;
