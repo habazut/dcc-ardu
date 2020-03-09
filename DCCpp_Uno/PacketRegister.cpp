@@ -59,14 +59,7 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
     regMap[nReg]=newReg;              // set the regMap[nReg] to be updated
   } else                              // if nReg is 0 then we have to wait here, otherwise we can wait later
     while(nextReg!=NULL);             // busy wait while there is a Register already waiting to be updated
-/*      INTERFACE.print(".");         // nextReg will be reset to NULL by interrupt when prior Register updated fully processed*/
-
-/*
-  INTERFACE.print(" NewReg= ");
-  INTERFACE.print((int)newReg);
-  INTERFACE.print(" recycleReg= ");
-  INTERFACE.print((int)recycleReg);
-*/    
+                                      // nextReg will be reset to NULL by interrupt when prior Register updated fully processed
  
   Register *p=regMap[nReg];           // set Register to be updated
   byte *buf=p->buf;                   // set byte buffer in the Packet to be updated
@@ -117,7 +110,7 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
 
   if (nReg != 0)                    // if nReg was 0 then we waited above
     while(nextReg!=NULL);           // busy wait while there is a Register already waiting to be updated
-/*      INTERFACE.print(".");       // nextReg will be reset to NULL by interrupt when prior Register updated fully processed*/
+                                    // nextReg will be reset to NULL by interrupt when prior Register updated fully processed
   nextReg=p;
 
   this->nRepeat=nRepeat;
@@ -253,29 +246,26 @@ byte RegisterList::ackdetect(int base) volatile{
     int current;
     unsigned long acktime, lowflankMicros, upflankMicros;
     unsigned long oldPacketCounter;
-    long int opc;  /* Only used for debugging, remove later */
 
-    opc = oldPacketCounter = packetsTransmitted; // remember time when we started
-    for(int j=0;j<ACK_SAMPLE_COUNT;j++){  /* XXX remove ACK_SAMPLE_COUNT ?? */
+    oldPacketCounter = packetsTransmitted; // remember time when we started
+/*    for(int j=0;j<ACK_SAMPLE_COUNT;j++){  XXX remove ACK_SAMPLE_COUNT ?? */
+    for(;;){
       int current = analogRead(CURRENT_MONITOR_PIN_PROG);
-      if (opc != packetsTransmitted) {
-	  INTERFACE.print(packetsTransmitted); INTERFACE.print(":");
-	  opc = packetsTransmitted;
-      }
-      INTERFACE.print(current-base); INTERFACE.print(".");
+
+      /*INTERFACE.print(current-base); INTERFACE.print(".");*/
       c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING); /* XXX this does not do what the standard says */
       if(upflankFound != 1 ) {
         if (c>ACK_SAMPLE_THRESHOLD) {
 	  upflankFound=1;                                  // upflank found, set flag
 	  upflankMicros=micros();                          // remember time when we got the upflank
-	  INTERFACE.print("^");
+	  /*INTERFACE.print("^");*/
 	}
       } else {                                             // upflankFound == 1
         if (searchLowflank && c<ACK_SAMPLE_THRESHOLD) {    // lowflank found
 	  lowflankMicros = micros();
 	  searchLowflank= 0;
 	  acktime = (unsigned long)(lowflankMicros - upflankMicros);
-	  INTERFACE.print("v"); INTERFACE.print(acktime); INTERFACE.print("v");
+	  /*INTERFACE.print("v"); INTERFACE.print(acktime); INTERFACE.print("v");*/
 	  if (acktime < 30000 || acktime > 56000) {        // this is way to wide but let go for now
 	    upflankFound = 0;
 	    searchLowflank = 1;
@@ -287,18 +277,16 @@ byte RegisterList::ackdetect(int base) volatile{
 	}
       }
       if(ackFound && (unsigned long)(packetsTransmitted - oldPacketCounter) >= 3) { // wait for at least 3 packets after detected Ack
-        INTERFACE.print(packetsTransmitted);INTERFACE.print("!");
+	  /*INTERFACE.print(packetsTransmitted);INTERFACE.print("!");*/
 	return 1;                                       // We had an Ack 3 pkt ago, we can leave the detection loop
       }
       if ((unsigned long)(packetsTransmitted - oldPacketCounter) >= 9) { // Timeout: Wait for 3 reset, 5 vrfy and one extra packet time
         loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
-	INTERFACE.print(packetsTransmitted); INTERFACE.print("X");
+	/*INTERFACE.print(packetsTransmitted); INTERFACE.print("X");*/
 	return ackFound;                              // timeout, maybe no Ack found
       }
     }
-    /* should never reach here but as a safe guard leave this */
-    loadPacket(1,resetPacket,2,1);          // go back to transmitting reset packets
-    return 0;
+    /* should never reach here as there is a for(;;) above */
 } // RegisterList::ackdetect(int)
   
 ///////////////////////////////////////////////////////////////////////////////
@@ -362,7 +350,6 @@ void RegisterList::readCV(char *s) volatile{
     d = ackdetect(base);
     bitWrite(bValue,i,d);                   // write the found bit into bValue
   }                                         // end loop over bits
-  INTERFACE.println(bValue);
 
   bRead[0]=0x74+(highByte(cv)&0x03);      // set-up to re-verify entire byte
   bRead[2]=bValue;  
