@@ -2,7 +2,7 @@
 
 PacketRegister.cpp
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
-                   2016 Harald Barth
+              2016-2020 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -14,15 +14,18 @@ Part of DCC++ BASE STATION for the Arduino
 
 ///////////////////////////////////////////////////////////////////////////////
     
-RegisterList::RegisterList(int maxNumRegs){
+RegisterList::RegisterList(int maxNumRegs, byte isProgReg){
+  this->isProgReg=isProgReg;
   this->maxNumRegs=maxNumRegs;
+  packetsTransmitted = 0;
   reg=(Register *)calloc((maxNumRegs+1),sizeof(Register));
   regMap=(Register **)calloc((maxNumRegs+1),sizeof(Register *));
-  speedTable=(int *)calloc((maxNumRegs+1),sizeof(int *));
+  speedTable=(byte *)calloc((maxNumRegs+1),sizeof(byte));
   currentReg=reg;
   regMap[0]=reg;
   maxLoadedReg=reg;
   nextReg=NULL;
+  recycleReg = NULL;
   currentBit=0;
   nRepeat=0;
   debugcount=0;
@@ -35,16 +38,30 @@ RegisterList::RegisterList(int maxNumRegs){
 // BITSTREAM IS STORED IN UP TO A 9-BYTE ARRAY (USING AT MOST 69 OF 72 BITS)
 
 void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int printFlag) volatile {
+  Register *loopReg = NULL;
+  Register *newReg = NULL;
+  byte of=0;
   
   nReg=nReg%((maxNumRegs+1));          // force nReg to be between 0 and maxNumRegs, inclusive
 
-  while(nextReg!=NULL);              // pause while there is a Register already waiting to be updated -- nextReg will be reset to NULL by interrupt when prior Register updated fully processed
+  if (nReg != 0) {                     // nReg = 0 is the special "direct out" register
+    newReg=maxLoadedReg+1;
+    for(loopReg=reg; loopReg <=maxLoadedReg; loopReg++) {
+        if (loopReg == recycleReg) {
+          newReg = recycleReg;
+	  break;
+	}
+    }
+    if(regMap[nReg]==NULL)
+	recycleReg = NULL;
+    else
+	recycleReg = regMap[nReg];    // remember where the regMap[nReg] that will be invalidated was stored
+    regMap[nReg]=newReg;              // set the regMap[nReg] to be updated
+  } else                              // if nReg is 0 then we have to wait here, otherwise we can wait later
+    while(nextReg!=NULL);             // busy wait while there is a Register already waiting to be updated
+                                      // nextReg will be reset to NULL by interrupt when prior Register updated fully processed
  
-  if(regMap[nReg]==NULL)              // first time this Register Number has been called
-   regMap[nReg]=maxLoadedReg+1;       // set Register Pointer for this Register Number to next available Register
- 
-  Register *r=regMap[nReg];           // set Register to be updated
-  Packet *p=&((r->packet)[(r->ap+1)&1]);    // set Packet in the Register to be updated, (r-ap+1)&1 points to the updatePacket
+  Register *p=regMap[nReg];           // set Register to be updated
   byte *buf=p->buf;                   // set byte buffer in the Packet to be updated
           
   b[nBytes]=b[0];                        // copy first byte into what will become the checksum byte  
@@ -52,39 +69,50 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
     b[nBytes]^=b[i];
   nBytes++;                              // increment number of bytes in packet to include checksum byte
       
-/*  buf[0]=0xFF;                        // first  8 bit of 22-bit preamble*/
-  buf[0]=0xFF;                        // second 8 bit of 14-bit preamble
-  buf[1]=0xFC + bitRead(b[0],7);      // last   6 bit of 14-bit preamble + data start bit + b[0], bit 7
-  buf[2]=b[0]<<1;                     // b[0], bits 6-0 + data start bit
-  buf[3]=b[1];                        // b[1], all bits
-  buf[4]=b[2]>>1;                     // b[2], bits 7-1
-  buf[5]=b[2]<<7;                     // b[2], bit 0
+  if (isProgReg && nBytes <= 5) {        // service mode programming (progRegs) need long preamble 
+    of=1;                                // all service mode commands _should_ be <= 5 bytes
+    buf[0]=0xFF;                         // first  8 bit of 22-bit preamble
+  }
+  buf[0+of]=0xFF;                        // first  8 bit of 14-bit preamble or second 8 bit of 22-bit preamble
+  buf[1+of]=0xFC + bitRead(b[0],7);      // last   6 bit of preamble + data start bit + b[0], bit 7
+  buf[2+of]=b[0]<<1;                     // b[0], bits 6-0 + data start bit
+  buf[3+of]=b[1];                        // b[1], all bits
+  buf[4+of]=b[2]>>1;                     // b[2], bits 7-1
+  buf[5+of]=b[2]<<7;                     // b[2], bit 0
   
   if(nBytes==3){
-    bitSet(buf[5],6);                 // endbit
-    p->nBits=42;
+    bitSet(buf[5+of],6);                 // endbit
+    p->nBits=42+8*of;
   } else{
-    buf[5]+=b[3]>>2;                  // b[3], bits 7-2
-    buf[6]=b[3]<<6;                   // b[3], bit 1-0
+    buf[5+of]+=b[3]>>2;                  // b[3], bits 7-2
+    buf[6+of]=b[3]<<6;                   // b[3], bit 1-0
     if(nBytes==4){
-      bitSet(buf[6],5);               // endbit
-      p->nBits=51;
+      bitSet(buf[6+of],5);               // endbit
+      p->nBits=51+8*of;
     } else{
-      buf[6]+=b[4]>>3;                // b[4], bits 7-3
-      buf[7]=b[4]<<5;                 // b[4], bits 2-0
+      buf[6+of]+=b[4]>>3;                // b[4], bits 7-3
+      buf[7+of]=b[4]<<5;                 // b[4], bits 2-0
       if(nBytes==5){
-	bitSet(buf[7],4);             // endbit
-        p->nBits=60;
+	bitSet(buf[7+of],4);             // endbit
+        p->nBits=60+8*of;
       } else{
-        buf[7]+=b[5]>>4;              // b[5], bits 7-4
+        buf[7+of]+=b[5]>>4;              // b[5], bits 7-4
         buf[8]=b[5]<<4;               // b[5], bits 3-0
 	bitSet(buf[8],3);             // endbit
         p->nBits=69;
       } // >5 bytes
     } // >4 bytes
   } // >3 bytes
+  buf[8] &= 0xFE;                     // clear invalid flag on this register/packet content
   
-  nextReg=r;
+  if (nReg != 0 && recycleReg!=NULL)
+      (recycleReg->buf)[8] |= 0x01;   // set invalid flag on recycleReg packet content
+
+  if (nReg != 0)                    // if nReg was 0 then we waited above
+    while(nextReg!=NULL);           // busy wait while there is a Register already waiting to be updated
+                                    // nextReg will be reset to NULL by interrupt when prior Register updated fully processed
+  nextReg=p;
+
   this->nRepeat=nRepeat;
   maxLoadedReg=max(maxLoadedReg,nextReg);
   
@@ -111,6 +139,11 @@ void RegisterList::setThrottle(char *s) volatile{
 
   if(cab>127)
     b[nB++]=highByte(cab) | 0xC0;      // convert train number into a two-byte address
+
+  if(tSpeed > 126)                     // Cap speed at max value 126
+      tSpeed = 126;
+
+  tDirection &= 0x01;                  // Only look at direction bit
     
   b[nB++]=lowByte(cab);
   b[nB++]=0x3F;                        // 128-step speed control byte
@@ -129,7 +162,7 @@ void RegisterList::setThrottle(char *s) volatile{
   INTERFACE.print(tDirection);
   INTERFACE.print(F(">"));
   
-  speedTable[nReg]=tDirection==1?tSpeed:-tSpeed;
+  speedTable[nReg]=tSpeed+tDirection*128;
     
 } // RegisterList::setThrottle()
 
@@ -200,14 +233,101 @@ void RegisterList::writeTextPacket(char *s) volatile{
   loadPacket(nReg,b,nBytes,0,1);
     
 } // RegisterList::writeTextPacket()
+
+///////////////////////////////////////////////////////////////////////////////
+
+/* ackdetect side-effect: Will restore resetPacket to slot 1 */
+
+byte RegisterList::ackdetect(int base) volatile{
+    byte upflankFound = 0;
+    byte ackFound = 0;
+    int c = 0;
+    byte searchLowflank = 1;
+    int current;
+    unsigned long acktime, lowflankMicros, upflankMicros;
+    unsigned long oldPacketCounter;
+
+    oldPacketCounter = packetsTransmitted; // remember time when we started
+/*    for(int j=0;j<ACK_SAMPLE_COUNT;j++){  XXX remove ACK_SAMPLE_COUNT ?? */
+    for(;;){
+      int current = analogRead(CURRENT_MONITOR_PIN_PROG);
+
+      /*INTERFACE.print(current-base); INTERFACE.print(".");*/
+      c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING); /* XXX this does not do what the standard says */
+      if(upflankFound != 1 ) {
+        if (c>ACK_SAMPLE_THRESHOLD) {
+	  upflankFound=1;                                  // upflank found, set flag
+	  upflankMicros=micros();                          // remember time when we got the upflank
+	  /*INTERFACE.print("^");*/
+	}
+      } else {                                             // upflankFound == 1
+        if (searchLowflank && c<ACK_SAMPLE_THRESHOLD) {    // lowflank found
+	  lowflankMicros = micros();
+	  searchLowflank= 0;
+	  acktime = (unsigned long)(lowflankMicros - upflankMicros);
+	  /*INTERFACE.print("v"); INTERFACE.print(acktime); INTERFACE.print("v");*/
+	  if (acktime < 30000 || acktime > 56000) {        // this is way to wide but let go for now
+	    upflankFound = 0;
+	    searchLowflank = 1;
+	  } else {
+	    ackFound = 1;
+	    loadPacket(1,resetPacket,2,1);                   // go back to transmitting reset packets
+	    oldPacketCounter = packetsTransmitted;           // remember time when we got the Ack, leave loop below later
+	  }
+	}
+      }
+      if(ackFound && (unsigned long)(packetsTransmitted - oldPacketCounter) >= 3) { // wait for at least 3 packets after detected Ack
+	  /*INTERFACE.print(packetsTransmitted);INTERFACE.print("!");*/
+	return 1;                                       // We had an Ack 3 pkt ago, we can leave the detection loop
+      }
+      if ((unsigned long)(packetsTransmitted - oldPacketCounter) >= 9) { // Timeout: Wait for 3 reset, 5 vrfy and one extra packet time
+        loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
+	/*INTERFACE.print(packetsTransmitted); INTERFACE.print("X");*/
+	return ackFound;                              // timeout, maybe no Ack found
+      }
+    }
+    /* should never reach here as there is a for(;;) above */
+} // RegisterList::ackdetect(int)
   
 ///////////////////////////////////////////////////////////////////////////////
+
+/* power up sequence: Check if we need to turn on rail power and if we do */
+/* tell caller so that caller can turn off rail power later               */
+
+byte RegisterList::poweron() volatile {
+  byte turnoff = 0;
+  byte numpackets = 3;                                   // 3 packets default wait
+  unsigned long oldPacketCounter;
+
+  if (digitalRead(SIGNAL_ENABLE_PIN_PROG) == LOW) {
+    turnoff = 1;
+    numpackets = 20;                                     // 20 packets poweron wait
+    digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
+  }
+  oldPacketCounter=packetsTransmitted;
+  loadPacket(1,resetPacket,2,1);
+  while ((unsigned long)(packetsTransmitted - oldPacketCounter) < numpackets); // busy wait
+  return turnoff;
+} // RegisterList::poweron()
+
+///////////////////////////////////////////////////////////////////////////////
+
+int RegisterList::readBaseCurrent() volatile {
+  int base=0;
+  /* read base current */
+  for(int j=0;j<ACK_BASE_COUNT;j++)
+    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
+  base/=ACK_BASE_COUNT;
+  return base;
+} // RegisterList::readBaseCurrent()
 
 void RegisterList::readCV(char *s) volatile{
   byte bRead[4];
   int bValue;
-  int c,d,base;
+  byte d;                            // tmp var for holding ackdetect answer
+  int base;                          // measured base current before ack
   int cv, callBack, callBackSub;
+  byte turnoff;                      // need to turn off power again
 
   if(sscanf(s,"%d %d %d",&cv,&callBack,&callBackSub)!=3)          // cv = 1-1024
     return;    
@@ -217,56 +337,29 @@ void RegisterList::readCV(char *s) volatile{
   bRead[1]=lowByte(cv);
   
   bValue=0;
-  
-  for(int i=0;i<8;i++){
-    
-    c=0;
-    d=0;
-    base=0;
 
-    for(int j=0;j<ACK_BASE_COUNT;j++)
-      base+=analogRead(CURRENT_MONITOR_PIN_PROG);
-    base/=ACK_BASE_COUNT;
+  turnoff = poweron();
+  base=readBaseCurrent();
 
+  for(int i=0;i<8;i++){                     // check all 8 bits
     bRead[2]=0xE8+i;  
 
     loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-    loadPacket(0,bRead,3,5);                // NMRA recommends 5 verfy packets
-    loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)
+    loadPacket(1,bRead,3,1);                // Start transmitting verify packets (according to NMRA at least 5 )
+                                            // but we do it continiously until Ack or timeout
+    d = ackdetect(base);
+    bitWrite(bValue,i,d);                   // write the found bit into bValue
+  }                                         // end loop over bits
 
-    for(int j=0;j<ACK_SAMPLE_COUNT;j++){
-      c=(analogRead(CURRENT_MONITOR_PIN_PROG)-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
-      if(c>ACK_SAMPLE_THRESHOLD)
-        d=1;
-    }
-
-    bitWrite(bValue,i,d);
-  }
-    
-  c=0;
-  d=0;
-  base=0;
-
-  for(int j=0;j<ACK_BASE_COUNT;j++)
-    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
-  base/=ACK_BASE_COUNT;
-  
-  bRead[0]=0x74+(highByte(cv)&0x03);   // set-up to re-verify entire byte
+  bRead[0]=0x74+(highByte(cv)&0x03);      // set-up to re-verify entire byte
   bRead[2]=bValue;  
-
   loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-  loadPacket(0,bRead,3,5);                // NMRA recommends 5 verfy packets
-  loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)
-    
-  for(int j=0;j<ACK_SAMPLE_COUNT;j++){
-    c=(analogRead(CURRENT_MONITOR_PIN_PROG)-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
-    if(c>ACK_SAMPLE_THRESHOLD)
-      d=1;
-  }
-    
+  loadPacket(1,bRead,3,1);                // Start transmitting verify packets (according to NMRA at least 5 
+                                          // but we do it continiously until Ack or timeout
+  d = ackdetect(base);
+
   if(d==0)    // verify unsuccessful
     bValue=-1;
-
   INTERFACE.print(F("<r"));
   INTERFACE.print(callBack);
   INTERFACE.print(F("|"));
@@ -276,6 +369,8 @@ void RegisterList::readCV(char *s) volatile{
   INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
   INTERFACE.print(F(">"));
+  if (turnoff)
+    digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
         
 } // RegisterList::readCV()
 
@@ -283,43 +378,31 @@ void RegisterList::readCV(char *s) volatile{
 
 void RegisterList::writeCVByte(char *s) volatile{
   byte bWrite[4];
+  byte turnoff;
   int bValue;
-  int c,d,base;
+  byte d;
+  int base;
   int cv, callBack, callBackSub;
 
   if(sscanf(s,"%d %d %d %d",&cv,&bValue,&callBack,&callBackSub)!=4)          // cv = 1-1024
     return;    
   cv--;                              // actual CV addresses are cv-1 (0-1023)
+
+  turnoff = poweron();
+  base=readBaseCurrent();
   
   bWrite[0]=0x7C+(highByte(cv)&0x03);   // any CV>1023 will become modulus(1024) due to bit-mask of 0x03
   bWrite[1]=lowByte(cv);
   bWrite[2]=bValue;
+  loadPacket(1,bWrite,3,1);
+  d = ackdetect(base);
 
-  loadPacket(0,resetPacket,2,1);
-  loadPacket(0,bWrite,3,4);
-  loadPacket(0,resetPacket,2,1);
-  loadPacket(0,idlePacket,2,10);
-
-  c=0;
-  d=0;
-  base=0;
-
-  for(int j=0;j<ACK_BASE_COUNT;j++)
-    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
-  base/=ACK_BASE_COUNT;
-  
-  bWrite[0]=0x74+(highByte(cv)&0x03);   // set-up to re-verify entire byte
-
-  loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-  loadPacket(0,bWrite,3,5);               // NMRA recommends 5 verfy packets
-  loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)
-    
-  for(int j=0;j<ACK_SAMPLE_COUNT;j++){
-    c=(analogRead(CURRENT_MONITOR_PIN_PROG)-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
-    if(c>ACK_SAMPLE_THRESHOLD)
-      d=1;
+  if (d == 0) { // we did not get ack on the write, try do do a traditional verify
+    bWrite[0]=0x74+(highByte(cv)&0x03);   // set-up to re-verify entire byte
+    loadPacket(1,bWrite,3,1);
+    d = ackdetect(base);
   }
-    
+
   if(d==0)    // verify unsuccessful
     bValue=-1;
 
@@ -332,6 +415,8 @@ void RegisterList::writeCVByte(char *s) volatile{
   INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
   INTERFACE.print(F(">"));
+  if (turnoff)
+    digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
 
 } // RegisterList::writeCVByte()
   
@@ -339,43 +424,33 @@ void RegisterList::writeCVByte(char *s) volatile{
 
 void RegisterList::writeCVBit(char *s) volatile{
   byte bWrite[4];
+  byte turnoff;
   int bNum,bValue;
-  int c,d,base;
+  byte d;
+  int base;
   int cv, callBack, callBackSub;
 
   if(sscanf(s,"%d %d %d %d %d",&cv,&bNum,&bValue,&callBack,&callBackSub)!=5)          // cv = 1-1024
     return;    
   cv--;                              // actual CV addresses are cv-1 (0-1023)
+
+  turnoff = poweron();
+  base=readBaseCurrent();
+
   bValue=bValue%2;
   bNum=bNum%8;
-  
-  bWrite[0]=0x78+(highByte(cv)&0x03);   // any CV>1023 will become modulus(1024) due to bit-mask of 0x03
+  bWrite[0]=0x78+(highByte(cv)&0x03);    // any CV>1023 will become modulus(1024) due to bit-mask of 0x03
   bWrite[1]=lowByte(cv);  
   bWrite[2]=0xF0+bValue*8+bNum;
+  loadPacket(1,bWrite,3,1);
+  d = ackdetect(base);
 
-  loadPacket(0,resetPacket,2,1);
-  loadPacket(0,bWrite,3,4);
-  loadPacket(0,resetPacket,2,1);
-  loadPacket(0,idlePacket,2,10);
-
-  c=0;
-  d=0;
-  base=0;
-
-  for(int j=0;j<ACK_BASE_COUNT;j++)
-    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
-  base/=ACK_BASE_COUNT;
+  if (d == 0) {                          // did not get ack from write and need to verify
   
-  bitClear(bWrite[2],4);              // change instruction code from Write Bit to Verify Bit
+    bitClear(bWrite[2],4);               // change instruction code from Write Bit to Verify Bit
 
-  loadPacket(0,resetPacket,2,3);          // NMRA recommends starting with 3 reset packets
-  loadPacket(0,bWrite,3,5);               // NMRA recommends 5 verfy packets
-  loadPacket(0,resetPacket,2,1);          // forces code to wait until all repeats of bRead are completed (and decoder begins to respond)
-    
-  for(int j=0;j<ACK_SAMPLE_COUNT;j++){
-    c=(analogRead(CURRENT_MONITOR_PIN_PROG)-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING);
-    if(c>ACK_SAMPLE_THRESHOLD)
-      d=1;
+    loadPacket(1,bWrite,3,1);
+    d = ackdetect(base);
   }
     
   if(d==0)    // verify unsuccessful
@@ -392,6 +467,8 @@ void RegisterList::writeCVBit(char *s) volatile{
   INTERFACE.print(F(" "));
   INTERFACE.print(bValue);
   INTERFACE.print(F(">"));
+  if (turnoff)
+    digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
 
 } // RegisterList::writeCVBit()
   

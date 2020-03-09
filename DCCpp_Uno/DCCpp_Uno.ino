@@ -2,7 +2,7 @@
 
 DCC++ BASE STATION
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
-              2016-2019 Harald Barth
+              2016-2020 Harald Barth
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -194,10 +194,10 @@ void showConfiguration();
 // NOTE REGISTER LISTS MUST BE DECLARED WITH "VOLATILE" QUALIFIER TO ENSURE THEY ARE PROPERLY UPDATED BY INTERRUPT ROUTINES
 
 volatile RegisterList mainRegs(MAX_MAIN_REGISTERS);    // create list of registers for MAX_MAIN_REGISTER Main Track Packets
-volatile RegisterList progRegs(2);                     // create a shorter list of only two registers for Program Track Packets
+volatile RegisterList progRegs(2, 1 /*isProgReg*/);    // create a shorter list of only two registers for Program Track Packets
 
-CurrentMonitor mainMonitor(CURRENT_MONITOR_PIN_MAIN,"<p2>");  // create monitor for current on Main Track
-CurrentMonitor progMonitor(CURRENT_MONITOR_PIN_PROG,"<p3>");  // create monitor for current on Program Track
+CurrentMonitor mainMonitor(SIGNAL_ENABLE_PIN_MAIN, CURRENT_MONITOR_PIN_MAIN, "<p2>");  // create monitor for current on Main Track
+CurrentMonitor progMonitor(SIGNAL_ENABLE_PIN_PROG, CURRENT_MONITOR_PIN_PROG, "<p3>");  // create monitor for current on Program Track
 
 ///////////////////////////////////////////////////////////////////////////////
 // MAIN ARDUINO LOOP
@@ -325,7 +325,7 @@ void setup(){
   bitClear(TCCR0B,CS02);    // set Timer 0 prescale=64
   bitSet(TCCR0B,CS01);
   bitSet(TCCR0B,CS00);
-    
+
   OCR0A=DCC_ONE_BIT_TOTAL_DURATION_TIMER0;
   OCR0B=DCC_ONE_BIT_PULSE_DURATION_TIMER0;
   
@@ -415,34 +415,42 @@ void setup(){
 #pragma GCC optimize ("-O3")
 
 #define DCC_SIGNAL(R,N) \
-  if(R.currentBit==(R.currentReg->packet)[(R.currentReg->ap)&1].nBits){    /* IF no more bits in this DCC Packet */ \
-    R.currentBit=0;                                       /*   reset current bit pointer and determine which Register and Packet to process next--- */ \
-    if(R.nRepeat>0 && R.currentReg==R.reg){               /*   IF current Register is first Register AND should be repeated */ \
-      R.nRepeat--;                                        /*     decrement repeat count; result is this same Packet will be repeated */ \
-    } else if(R.nextReg!=NULL){                           /*   ELSE IF another Register has been updated */ \
-      R.currentReg=R.nextReg;                             /*     update currentReg to nextReg */ \
-      R.nextReg=NULL;                                     /*     reset nextReg to NULL */ \
-      (R.currentReg->ap)^=0x01;                              /*     flip active and update Packets */ \
-    } else{                                               /*   ELSE simply move to next Register */ \
-      if(R.currentReg==R.maxLoadedReg)                    /*     BUT IF this is last Register loaded */ \
-        R.currentReg=R.reg;                               /*       first reset currentReg to base Register, THEN */ \
-      R.currentReg++;                                     /*     increment current Register (note this logic causes Register[0] to be skipped when simply cycling through all Registers) */ \
-    }                                                     /*   END-ELSE */ \
-  }                                                       /* END-IF: currentReg, activePacket, and currentBit should now be properly set to point to next DCC bit */ \
-                                                          \
+  if(R.currentBit==R.currentReg->nBits) {    /* IF no more bits in this DCC Packet */ \
+    (R.currentReg->buf)[8] &= 0xFD;          /* Clear busy bit of register */   \
+    R.packetsTransmitted++;                  /* One more packet out 100% */ \
+    R.currentBit=0;                          /*   reset current bit pointer and determine which Register and Packet to process next--- */ \
+    if(R.nRepeat>0 && R.currentReg==R.reg) { /*   IF current Register is first Register AND should be repeated */ \
+      R.nRepeat--;                           /*     decrement repeat count; result is this same Packet will be repeated */ \
+    } else if(R.nextReg!=NULL){              /*   ELSE IF another Register has been updated */ \
+      R.currentReg=R.nextReg;                /*     update currentReg to nextReg */ \
+      R.nextReg=NULL;                        /*     reset nextReg to NULL */ \
+    } else{                                  /*   ELSE simply move to next Register */ \
+      if(R.currentReg==R.maxLoadedReg)       /*     BUT IF this is last Register loaded */ \
+        R.currentReg=R.reg;                  /*       first reset currentReg to base Register, THEN */ \
+      R.currentReg++;                        /* increment current Register (note this logic causes Register[0] to be skipped when simply cycling through all Registers) */ \
+    }                                        /* END-ELSE */ \
+                                             /* HERE currentReg, activePacket, and currentBit should now be properly set to point to next DCC bit */ \
+                                             /* Look at next packet */ \
+    if((R.currentReg->buf)[8] & 0x01) {      /* IF invalid flag is set skip */   \
+      if(R.currentReg==R.maxLoadedReg)       /*     BUT IF this is last Register loaded */ \
+        R.currentReg=R.reg;                  /*       first reset currentReg to base Register, THEN */ \
+      R.currentReg++;                        /* jump to next register */ \
+    } else                                   /* ELSE we process */ \
+      (R.currentReg->buf)[8] |= 0x02 ;       /* Set busy bit of register */ \
+  }                                          /* END-BIG-IF */ \
   if(LEDDEBUG && R.reg == mainRegs.reg && R.currentBit==0 && R.currentReg==R.reg+1){  /* At register number 1 */ \
-    R.debugcount++ & 1<<3 ? PORTB |= 32 : PORTB &=~ 32 ;                                                              \
+    R.debugcount++ & 1<<3 ? PORTB |= 32 : PORTB &=~ 32 ;                                                         \
   }                                                                                                              \
                                                                                                                  \
-  if((R.currentReg->packet)[(R.currentReg->ap)&1].buf[R.currentBit/8] & R.bitMask[R.currentBit%8]){     /* IF bit is a ONE */ \
-    OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                               /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
-    OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                               /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
-  } else{                                                                              /* ELSE it is a ZERO */ \
-    OCR ## N ## A=DCC_ZERO_BIT_TOTAL_DURATION_TIMER ## N;                              /*   set OCRA for timer N to full cycle duration of DCC ZERO bit */ \
-    OCR ## N ## B=DCC_ZERO_BIT_PULSE_DURATION_TIMER ## N;                              /*   set OCRB for timer N to half cycle duration of DCC ZERO bit */ \
-  }                                                                                    /* END-ELSE */ \
+  if((R.currentReg->buf)[R.currentBit/8] & R.bitMask[R.currentBit%8]){  /* IF bit is a ONE */ \
+    OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
+    OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
+  } else{                                                               /* ELSE it is a ZERO */ \
+    OCR ## N ## A=DCC_ZERO_BIT_TOTAL_DURATION_TIMER ## N;               /*   set OCRA for timer N to full cycle duration of DCC ZERO bit */ \
+    OCR ## N ## B=DCC_ZERO_BIT_PULSE_DURATION_TIMER ## N;               /*   set OCRB for timer N to half cycle duration of DCC ZERO bit */ \
+  }                                                                     /* END-ELSE */ \
                                                                                        \
-  R.currentBit++;                                         /* point to next bit in current Packet */  
+  R.currentBit++;                                                       /* point to next bit in current Packet */  
   
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -453,17 +461,13 @@ ISR(TIMER1_COMPB_vect){              // set interrupt service for OCR1B of TIMER
 }
 
 #ifdef ARDUINO_AVR_UNO      // Configuration for UNO
-
-ISR(TIMER0_COMPB_vect){              // set interrupt service for OCR1B of TIMER-0 which flips direction bit of Motor Shield Channel B controlling Prog Track
+ISR(TIMER0_COMPB_vect){     // set interrupt service for OCR1B of TIMER-0 which flips direction bit of Motor Shield Channel B controlling Prog Track
   DCC_SIGNAL(progRegs,0)
 }
-
-#else      // Configuration for MEGA
-
-ISR(TIMER3_COMPB_vect){              // set interrupt service for OCR3B of TIMER-3 which flips direction bit of Motor Shield Channel B controlling Prog Track
+#else                       // Configuration for MEGA
+ISR(TIMER3_COMPB_vect){     // set interrupt service for OCR3B of TIMER-3 which flips direction bit of Motor Shield Channel B controlling Prog Track
   DCC_SIGNAL(progRegs,3)
 }
-
 #endif
 
 // pop the -O3
