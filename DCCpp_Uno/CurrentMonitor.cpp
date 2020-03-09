@@ -2,7 +2,7 @@
 
 CurrentMonitor.cpp
 COPYRIGHT (c) 2013-2016 Gregg E. Berman
-              2016-2019 Harald Barth
+              2016-2020 Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino
 
@@ -14,8 +14,9 @@ Part of DCC++ BASE STATION for the Arduino
 
 ///////////////////////////////////////////////////////////////////////////////
 
-CurrentMonitor::CurrentMonitor(int pin, const char *msg){
-    this->pin=pin;
+CurrentMonitor::CurrentMonitor(int sp, int cp, const char *msg){
+    this->signalpin=sp;
+    this->currentpin=cp;
     this->msg=msg;
     current=0;
   } // CurrentMonitor::CurrentMonitor
@@ -35,9 +36,9 @@ boolean CurrentMonitor::checkTime(){
 } // CurrentMonitor::checkTime
   
 void CurrentMonitor::check(){
-  current=analogRead(pin)*CURRENT_SAMPLE_SMOOTHING+current*(1.0-CURRENT_SAMPLE_SMOOTHING);        // compute new exponentially-smoothed current
-  if(current>CURRENT_SAMPLE_MAX && digitalRead(pin)==HIGH){                                       // current overload and pin is on
-    digitalWrite(pin,LOW);                                                                        // disable pin in question
+  current=analogRead(currentpin)*CURRENT_SAMPLE_SMOOTHING+current*(1.0-CURRENT_SAMPLE_SMOOTHING); // compute new exponentially-smoothed current
+  if(current>CURRENT_SAMPLE_MAX){                                                                 // current overload and pin is on
+    digitalWrite(signalpin,LOW);                                                                  // disable pin in question
     INTERFACE.print(msg);                                                                         // print corresponding error message
   }    
 } // CurrentMonitor::check  
