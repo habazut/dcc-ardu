@@ -440,17 +440,12 @@ void setup(){
     R.debugcount++ & 1<<3 ? PORTB |= 32 : PORTB &=~ 32 ;                                                         \
   }                                                                                                              \
                                                                                                                  \
-  if(R.currentBit < PALEN ) {                                           /* IF bit is a ONE */ \
+  if(R.currentBit < PALEN || ( (R.currentReg->buf)[(R.currentBit-PALEN)/8] & R.bitMask[(R.currentBit-PALEN)%8] )) {  /* IF bit is a ONE */ \
     OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
     OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
   } else {                                                               /* ELSE it is a ZERO */ \
-    if( (R.currentReg->buf)[(R.currentBit-PALEN)/8] & R.bitMask[(R.currentBit-PALEN)%8] ) {  /* IF bit is a ONE */ \
-      OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
-      OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
-    } else {                                                               /* ELSE it is a ZERO */ \
       OCR ## N ## A=DCC_ZERO_BIT_TOTAL_DURATION_TIMER ## N;               /*   set OCRA for timer N to full cycle duration of DCC ZERO bit */ \
       OCR ## N ## B=DCC_ZERO_BIT_PULSE_DURATION_TIMER ## N;               /*   set OCRB for timer N to half cycle duration of DCC ZERO bit */ \
-    }                                                                     /* END-ELSE */ \
   }                                                                     /* END-ELSE */ \
                                                                                        \
   R.currentBit++;                                                       /* point to next bit in current Packet */  
