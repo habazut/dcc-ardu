@@ -415,8 +415,7 @@ void setup(){
 #pragma GCC optimize ("-O3")
 
 #define DCC_SIGNAL(R,N,PALEN) \
-  if(R.currentBit==R.currentReg->nBits) {    /* IF no more bits in this DCC Packet */ \
-    (R.currentReg->buf)[8] &= 0xFD;          /* Clear busy bit of register */   \
+  if(R.currentBit==(R.currentReg->nBits)+PALEN) { /* IF no more bits in this DCC Packet */ \
     R.packetsTransmitted++;                  /* One more packet out 100% */ \
     R.currentBit=0;                          /*   reset current bit pointer and determine which Register and Packet to process next--- */ \
     if(R.nRepeat>0 && R.currentReg==R.reg) { /*   IF current Register is first Register AND should be repeated */ \
@@ -431,23 +430,27 @@ void setup(){
     }                                        /* END-ELSE */ \
                                              /* HERE currentReg, activePacket, and currentBit should now be properly set to point to next DCC bit */ \
                                              /* Look at next packet */ \
-    if((R.currentReg->buf)[8] & 0x01) {      /* IF invalid flag is set skip */   \
+    if((R.currentReg->buf)[6] & 0x01) {      /* IF invalid flag is set skip */   \
       if(R.currentReg==R.maxLoadedReg)       /*     BUT IF this is last Register loaded */ \
         R.currentReg=R.reg;                  /*       first reset currentReg to base Register, THEN */ \
       R.currentReg++;                        /* jump to next register */ \
-    } else                                   /* ELSE we process */ \
-      (R.currentReg->buf)[8] |= 0x02 ;       /* Set busy bit of register */ \
+    }                                                              \
   }                                          /* END-BIG-IF */ \
   if(LEDDEBUG && R.reg == mainRegs.reg && R.currentBit==0 && R.currentReg==R.reg+1){  /* At register number 1 */ \
     R.debugcount++ & 1<<3 ? PORTB |= 32 : PORTB &=~ 32 ;                                                         \
   }                                                                                                              \
                                                                                                                  \
-  if(R.currentBit < PALEN || ( (R.currentReg->buf)[R.currentBit/8] & R.bitMask[R.currentBit%8] ) ) {  /* IF bit is a ONE */ \
+  if(R.currentBit < PALEN ) {                                           /* IF bit is a ONE */ \
     OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
     OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
-  } else{                                                               /* ELSE it is a ZERO */ \
-    OCR ## N ## A=DCC_ZERO_BIT_TOTAL_DURATION_TIMER ## N;               /*   set OCRA for timer N to full cycle duration of DCC ZERO bit */ \
-    OCR ## N ## B=DCC_ZERO_BIT_PULSE_DURATION_TIMER ## N;               /*   set OCRB for timer N to half cycle duration of DCC ZERO bit */ \
+  } else {                                                               /* ELSE it is a ZERO */ \
+    if( (R.currentReg->buf)[(R.currentBit-PALEN)/8] & R.bitMask[(R.currentBit-PALEN)%8] ) {  /* IF bit is a ONE */ \
+      OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
+      OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
+    } else {                                                               /* ELSE it is a ZERO */ \
+      OCR ## N ## A=DCC_ZERO_BIT_TOTAL_DURATION_TIMER ## N;               /*   set OCRA for timer N to full cycle duration of DCC ZERO bit */ \
+      OCR ## N ## B=DCC_ZERO_BIT_PULSE_DURATION_TIMER ## N;               /*   set OCRB for timer N to half cycle duration of DCC ZERO bit */ \
+    }                                                                     /* END-ELSE */ \
   }                                                                     /* END-ELSE */ \
                                                                                        \
   R.currentBit++;                                                       /* point to next bit in current Packet */  

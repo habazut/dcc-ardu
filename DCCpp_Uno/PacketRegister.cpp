@@ -69,44 +69,39 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
     b[nBytes]^=b[i];
   nBytes++;                              // increment number of bytes in packet to include checksum byte
       
-  if (isProgReg && nBytes <= 5) {        // service mode programming (progRegs) need long preamble 
-    of=1;                                // all service mode commands _should_ be <= 5 bytes
-    buf[0]=0xFF;                         // first  8 bit of 22-bit preamble
-  }
-  buf[0+of]=0xFF;                        // first  8 bit of 14-bit preamble or second 8 bit of 22-bit preamble
-  buf[1+of]=0xFC + bitRead(b[0],7);      // last   6 bit of preamble + data start bit + b[0], bit 7
-  buf[2+of]=b[0]<<1;                     // b[0], bits 6-0 + data start bit
-  buf[3+of]=b[1];                        // b[1], all bits
-  buf[4+of]=b[2]>>1;                     // b[2], bits 7-1
-  buf[5+of]=b[2]<<7;                     // b[2], bit 0
-  
+  buf[0]=b[0]>>1;                          // b[0] bits 7-1  startbit
+  buf[1]=b[0]<<7;                          // b[0] bit  0    startbit
+  buf[1]+=b[1]>>2;                         //                startbit  b[1] bits 7-2
+  buf[2]=b[1]<<6;                          // b[1] bits 0-1  startbit
+  buf[2]+=b[2]>>3;                         //                startbit  b[2] bits 7-3
+  buf[3]=b[2]<<5  ;                        // b[2] bits 0-2
   if(nBytes==3){
-    bitSet(buf[5+of],6);                 // endbit
-    p->nBits=42+8*of;
+    bitSet(buf[3],4);
+    p->nBits=28;
   } else{
-    buf[5+of]+=b[3]>>2;                  // b[3], bits 7-2
-    buf[6+of]=b[3]<<6;                   // b[3], bit 1-0
+    buf[3]+=b[3]>>4;                       // b[2] bits 0-2  startbit  b[3] bits 7-4
+    buf[4]=b[3]<<4;                        // b[3] bits 0-3
     if(nBytes==4){
-      bitSet(buf[6+of],5);               // endbit
-      p->nBits=51+8*of;
+      bitSet(buf[4],3);
+      p->nBits=37;
     } else{
-      buf[6+of]+=b[4]>>3;                // b[4], bits 7-3
-      buf[7+of]=b[4]<<5;                 // b[4], bits 2-0
+      buf[4]+=b[4]>>5;                     // b[3] bits 0-3  startbit  b[4] bits 7-5
+      buf[5]=b[4]<<3;                      // b[4] bits 0-4
       if(nBytes==5){
-	bitSet(buf[7+of],4);             // endbit
-        p->nBits=60+8*of;
+        bitSet(buf[5],2);
+        p->nBits=46;
       } else{
-        buf[7+of]+=b[5]>>4;              // b[5], bits 7-4
-        buf[8]=b[5]<<4;               // b[5], bits 3-0
-	bitSet(buf[8],3);             // endbit
-        p->nBits=69;
+	buf[5]+=b[5]>>6;                   // b[4] bits 0-4  startbit  b[5] bits 7-6
+	buf[6]=b[5]<<2;                    // b[5] bits 0-5  endbit
+        bitSet(buf[5],1);
+        p->nBits=55;
       } // >5 bytes
     } // >4 bytes
   } // >3 bytes
-  buf[8] &= 0xFE;                     // clear invalid flag on this register/packet content
+  buf[6] &= 0xFE;                     // clear invalid flag on this register/packet content
   
   if (nReg != 0 && recycleReg!=NULL)
-      (recycleReg->buf)[8] |= 0x01;   // set invalid flag on recycleReg packet content
+      (recycleReg->buf)[6] |= 0x01;   // set invalid flag on recycleReg packet content
 
   if (nReg != 0)                    // if nReg was 0 then we waited above
     while(nextReg!=NULL);           // busy wait while there is a Register already waiting to be updated

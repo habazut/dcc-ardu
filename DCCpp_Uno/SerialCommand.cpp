@@ -609,7 +609,7 @@ void SerialCommand::parse(char *com){
 	    INTERFACE.print(p->buf[i],HEX); INTERFACE.print(F("\t"));
 	}
 	INTERFACE.print(F("F_"));
-	INTERFACE.print((p->buf[8])&0x03,HEX); INTERFACE.print(F("\t"));
+	INTERFACE.print((p->buf[6])&0x01,HEX); INTERFACE.print(F("\t"));
 	INTERFACE.println("");
       }
       INTERFACE.println("");
