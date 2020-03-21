@@ -25,13 +25,12 @@ Part of DCC++ BASE STATION for the Arduino
 // Define a series of registers that can be sequentially accessed over a loop to generate a repeating series of DCC Packets
 
 struct Register{
-  byte buf[9];
+  byte buf[7];   /* 56 bits: 6*8=48 bits of DCC data + 7 start/stop bits + 1 internal flag bit */
   byte nBits;
 }; // Packet, for now named Register 
   
 struct RegisterList{  
   int maxNumRegs;
-  byte isProgReg;
   unsigned long packetsTransmitted;
   Register *reg;
   Register **regMap;
@@ -46,7 +45,7 @@ struct RegisterList{
   static byte idlePacket[];
   static byte resetPacket[];
   static byte bitMask[];
-  RegisterList(int, byte=0);
+  RegisterList(int);
   byte ackdetect(int) volatile;
   byte poweron() volatile;
   int readBaseCurrent() volatile;

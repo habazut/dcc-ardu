@@ -605,7 +605,7 @@ void SerialCommand::parse(char *com){
 	INTERFACE.print(F("M")); INTERFACE.print((int)(p-mRegs->reg)); INTERFACE.print(F(":\t"));
 	INTERFACE.print((int)p); INTERFACE.print(F("\t"));
 	INTERFACE.print(p->nBits); INTERFACE.print(F("\t"));
-	for(int i=0;i< p->nBits/8 + (p->nBits%8 ? 1 : 0 ) && i<10;i++){
+	for(int i=0;i< p->nBits/8 + (p->nBits%8 ? 1 : 0 ) && i<7;i++){ // This is diag code, we do not trust p->nBits only
 	    INTERFACE.print(p->buf[i],HEX); INTERFACE.print(F("\t"));
 	}
 	INTERFACE.print(F("F_"));
@@ -624,7 +624,7 @@ void SerialCommand::parse(char *com){
         INTERFACE.print(F("P")); INTERFACE.print((int)(p-pRegs->reg)); INTERFACE.print(F(":\t"));
         INTERFACE.print((int)p); INTERFACE.print(F("\t"));
 	INTERFACE.print(p->nBits); INTERFACE.print(F("\t"));
-	for(int i=0;i< p->nBits/8 + (p->nBits%8 ? 1 : 0 ) && i<10;i++){
+	for(int i=0;i< p->nBits/8 + (p->nBits%8 ? 1 : 0 ) && i<7;i++){ // This is diag code, we do not trust p->nBits only
 	    INTERFACE.print(p->buf[i],HEX); INTERFACE.print(F("\t"));
 	}
 	INTERFACE.print(F("F_"));

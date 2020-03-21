@@ -14,8 +14,7 @@ Part of DCC++ BASE STATION for the Arduino
 
 ///////////////////////////////////////////////////////////////////////////////
     
-RegisterList::RegisterList(int maxNumRegs, byte isProgReg){
-  this->isProgReg=isProgReg;
+RegisterList::RegisterList(int maxNumRegs){
   this->maxNumRegs=maxNumRegs;
   packetsTransmitted = 0;
   reg=(Register *)calloc((maxNumRegs+1),sizeof(Register));
@@ -64,36 +63,41 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
   Register *p=regMap[nReg];           // set Register to be updated
   byte *buf=p->buf;                   // set byte buffer in the Packet to be updated
           
+  /* Generate checksum and put into the last byte */
+
   b[nBytes]=b[0];                        // copy first byte into what will become the checksum byte  
   for(int i=1;i<nBytes;i++)              // XOR remaining bytes into checksum byte
     b[nBytes]^=b[i];
   nBytes++;                              // increment number of bytes in packet to include checksum byte
-      
-  buf[0]=b[0]>>1;                          // b[0] bits 7-1  startbit
-  buf[1]=b[0]<<7;                          // b[0] bit  0    startbit
-  buf[1]+=b[1]>>2;                         //                startbit  b[1] bits 7-2
-  buf[2]=b[1]<<6;                          // b[1] bits 0-1  startbit
-  buf[2]+=b[2]>>3;                         //                startbit  b[2] bits 7-3
+
+  /* Copy the DCC bits from bytes into the DCC output stream format which has           */
+  /* startbits=0 between all bytes and an additional stopbit=1 at the end of the packet */
+
+  buf[0]=b[0]>>1;                          // (startbit)    b[0] bits 7-1
+  buf[1]=b[0]<<7;                          // b[0] bit  0   (startbit)
+  buf[1]+=b[1]>>2;                         //                          b[1] bits 7-2
+  buf[2]=b[1]<<6;                          // b[1] bits 0-1 (startbit)
+  buf[2]+=b[2]>>3;                         //                          b[2] bits 7-3
   buf[3]=b[2]<<5  ;                        // b[2] bits 0-2
   if(nBytes==3){
     bitSet(buf[3],4);
     p->nBits=28;
   } else{
-    buf[3]+=b[3]>>4;                       // b[2] bits 0-2  startbit  b[3] bits 7-4
+    buf[3]+=b[3]>>4;                       //               (startbit) b[3] bits 7-4
     buf[4]=b[3]<<4;                        // b[3] bits 0-3
     if(nBytes==4){
-      bitSet(buf[4],3);
+      bitSet(buf[4],3);                    // (endbit)
       p->nBits=37;
     } else{
-      buf[4]+=b[4]>>5;                     // b[3] bits 0-3  startbit  b[4] bits 7-5
+      buf[4]+=b[4]>>5;                     //               (startbit) b[4] bits 7-5
       buf[5]=b[4]<<3;                      // b[4] bits 0-4
       if(nBytes==5){
-        bitSet(buf[5],2);
+        bitSet(buf[5],2);                  // (endbit)
         p->nBits=46;
       } else{
-	buf[5]+=b[5]>>6;                   // b[4] bits 0-4  startbit  b[5] bits 7-6
-	buf[6]=b[5]<<2;                    // b[5] bits 0-5  endbit
-        bitSet(buf[5],1);
+        buf[5]+=b[5]>>6;                   // b[4] bits 0-4  startbit  b[5] bits 7-6
+        buf[6]=b[5]<<2;                    // b[5] bits 0-5  endbit
+        bitSet(buf[5],1);                  // (endbit)
         p->nBits=55;
       } // >5 bytes
     } // >4 bytes
