@@ -414,7 +414,7 @@ void setup(){
 #pragma GCC push_options
 #pragma GCC optimize ("-O3")
 
-#define DCC_SIGNAL(R,N) \
+#define DCC_SIGNAL(R,N,PALEN) \
   if(R.currentBit==R.currentReg->nBits) {    /* IF no more bits in this DCC Packet */ \
     (R.currentReg->buf)[8] &= 0xFD;          /* Clear busy bit of register */   \
     R.packetsTransmitted++;                  /* One more packet out 100% */ \
@@ -442,7 +442,7 @@ void setup(){
     R.debugcount++ & 1<<3 ? PORTB |= 32 : PORTB &=~ 32 ;                                                         \
   }                                                                                                              \
                                                                                                                  \
-  if((R.currentReg->buf)[R.currentBit/8] & R.bitMask[R.currentBit%8]){  /* IF bit is a ONE */ \
+  if(R.currentBit < PALEN || ( (R.currentReg->buf)[R.currentBit/8] & R.bitMask[R.currentBit%8] ) ) {  /* IF bit is a ONE */ \
     OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
     OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
   } else{                                                               /* ELSE it is a ZERO */ \
@@ -457,16 +457,16 @@ void setup(){
 // NOW USE THE ABOVE MACRO TO CREATE THE CODE FOR EACH INTERRUPT
 
 ISR(TIMER1_COMPB_vect){              // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
-  DCC_SIGNAL(mainRegs,1)
+  DCC_SIGNAL(mainRegs,1,14) // Change to 16 later
 }
 
 #ifdef ARDUINO_AVR_UNO      // Configuration for UNO
 ISR(TIMER0_COMPB_vect){     // set interrupt service for OCR1B of TIMER-0 which flips direction bit of Motor Shield Channel B controlling Prog Track
-  DCC_SIGNAL(progRegs,0)
+  DCC_SIGNAL(progRegs,0,22)
 }
 #else                       // Configuration for MEGA
 ISR(TIMER3_COMPB_vect){     // set interrupt service for OCR3B of TIMER-3 which flips direction bit of Motor Shield Channel B controlling Prog Track
-  DCC_SIGNAL(progRegs,3)
+  DCC_SIGNAL(progRegs,3,22)
 }
 #endif
 
