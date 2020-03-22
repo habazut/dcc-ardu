@@ -405,10 +405,11 @@ void setup(){
 // that can be invoked with proper paramters for each interrupt.  This slightly increases the size of the code base by duplicating
 // some of the logic for each interrupt, but saves additional time.
 
-// As structured, the interrupt code below completes at an average of just under 6 microseconds with a worse-case of just under 11 microseconds
-// when a new register is loaded and the logic needs to switch active register packet pointers.
+// Exactly how long this takes has to be measured (the original code completed at an average of just under 6 microseconds with a 
+// worse-case of just under 11 microseconds when a new register is loaded and the logic needs to switch active register packet pointers).
 
-// THE INTERRUPT CODE MACRO:  R=REGISTER LIST (mainRegs or progRegs), and N=TIMER (0 or 1)
+// THE INTERRUPT CODE MACRO:  R=REGISTER LIST (mainRegs or progRegs), and N=TIMER (0 or 1),
+//                            PALEN=PREAMBLELENGTH (14 or 16 for RailCom om Main, 22 on Prog)
 
 // optimize time critical stuff harder 
 #pragma GCC push_options
@@ -443,9 +444,9 @@ void setup(){
   if(R.currentBit < PALEN || ( (R.currentReg->buf)[(R.currentBit-PALEN)/8] & R.bitMask[(R.currentBit-PALEN)%8] )) {  /* IF bit is a ONE */ \
     OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
     OCR ## N ## B=DCC_ONE_BIT_PULSE_DURATION_TIMER ## N;                /*   set OCRB for timer N to half cycle duration of DCC ONE but */ \
-  } else {                                                               /* ELSE it is a ZERO */ \
-      OCR ## N ## A=DCC_ZERO_BIT_TOTAL_DURATION_TIMER ## N;               /*   set OCRA for timer N to full cycle duration of DCC ZERO bit */ \
-      OCR ## N ## B=DCC_ZERO_BIT_PULSE_DURATION_TIMER ## N;               /*   set OCRB for timer N to half cycle duration of DCC ZERO bit */ \
+  } else {                                                              /* ELSE it is a ZERO */ \
+      OCR ## N ## A=DCC_ZERO_BIT_TOTAL_DURATION_TIMER ## N;             /*   set OCRA for timer N to full cycle duration of DCC ZERO bit */ \
+      OCR ## N ## B=DCC_ZERO_BIT_PULSE_DURATION_TIMER ## N;             /*   set OCRB for timer N to half cycle duration of DCC ZERO bit */ \
   }                                                                     /* END-ELSE */ \
                                                                                        \
   R.currentBit++;                                                       /* point to next bit in current Packet */  
@@ -454,7 +455,7 @@ void setup(){
 
 // NOW USE THE ABOVE MACRO TO CREATE THE CODE FOR EACH INTERRUPT
 
-ISR(TIMER1_COMPB_vect){              // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
+ISR(TIMER1_COMPB_vect){     // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
   DCC_SIGNAL(mainRegs,1,14) // Change to 16 later
 }
 
