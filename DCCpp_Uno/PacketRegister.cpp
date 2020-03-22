@@ -39,7 +39,6 @@ RegisterList::RegisterList(int maxNumRegs){
 void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int printFlag) volatile {
   Register *loopReg = NULL;
   Register *newReg = NULL;
-  byte of=0;
   
   nReg=nReg%((maxNumRegs+1));          // force nReg to be between 0 and maxNumRegs, inclusive
 
@@ -220,7 +219,6 @@ void RegisterList::writeTextPacket(char *s) volatile{
   int nReg;
   byte b[6];
   int nBytes;
-  volatile RegisterList *regs;
     
   nBytes=sscanf(s,"%d %x %x %x %x %x",&nReg,b,b+1,b+2,b+3,b+4)-1;
   
@@ -250,7 +248,7 @@ byte RegisterList::ackdetect(int base) volatile{
 
     oldPacketCounter = packetsTransmitted; // remember time when we started
     for(;;){
-      int current = analogRead(CURRENT_MONITOR_PIN_PROG);
+      current = analogRead(CURRENT_MONITOR_PIN_PROG);
 
       /*INTERFACE.print(current-base); INTERFACE.print(".");*/
       c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING); /* XXX this does not do what the standard says */
