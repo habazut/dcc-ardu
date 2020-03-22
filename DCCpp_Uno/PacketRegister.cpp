@@ -243,11 +243,12 @@ byte RegisterList::ackdetect(int base) volatile{
     int c = 0;
     byte searchLowflank = 1;
     int current;
-    unsigned long acktime, lowflankMicros, upflankMicros;
+    unsigned long acktime;
+    unsigned long upflankTickCounter;
+    unsigned long lowflankTickCounter;
     unsigned long oldPacketCounter;
 
     oldPacketCounter = packetsTransmitted; // remember time when we started
-/*    for(int j=0;j<ACK_SAMPLE_COUNT;j++){  XXX remove ACK_SAMPLE_COUNT ?? */
     for(;;){
       int current = analogRead(CURRENT_MONITOR_PIN_PROG);
 
@@ -256,16 +257,16 @@ byte RegisterList::ackdetect(int base) volatile{
       if(upflankFound != 1 ) {
         if (c>ACK_SAMPLE_THRESHOLD) {
 	  upflankFound=1;                                  // upflank found, set flag
-	  upflankMicros=micros();                          // remember time when we got the upflank
+	  upflankTickCounter=tickCounter;                  // remember time when we got the upflank
 	  /*INTERFACE.print("^");*/
 	}
       } else {                                             // upflankFound == 1
         if (searchLowflank && c<ACK_SAMPLE_THRESHOLD) {    // lowflank found
-	  lowflankMicros = micros();
+	  lowflankTickCounter = tickCounter;
 	  searchLowflank= 0;
-	  acktime = (unsigned long)(lowflankMicros - upflankMicros);
-	  /*INTERFACE.print("v"); INTERFACE.print(acktime); INTERFACE.print("v");*/
-	  if (acktime < 30000 || acktime > 56000) {        // this is way to wide but let go for now
+	  acktime = (unsigned long)(lowflankTickCounter - upflankTickCounter);
+	  /*INTERFACE.print("v"); INTERFACE.print(acktime*4); INTERFACE.print("v");*/
+	  if (acktime < 1125 || acktime > 1875) {         // 1125*4=4500us 1875*4=7500ms this is way to wide but let go for now
 	    upflankFound = 0;
 	    searchLowflank = 1;
 	  } else {
