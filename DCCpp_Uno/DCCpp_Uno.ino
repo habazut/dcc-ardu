@@ -253,7 +253,11 @@ void setup(){
   SerialCommand::init(&mainRegs, &progRegs, &mainMonitor);   // create structure to read and parse commands from serial line
 
   SerialCommand::printHeader();
-  
+
+  // Set up testpin
+  pinMode(TESTPIN,OUTPUT);
+  digitalWrite(TESTPIN,LOW);
+
   // CONFIGURE TIMER_1 TO OUTPUT 50% DUTY CYCLE DCC SIGNALS ON OC1B INTERRUPT PINS
   
   // Direction Pin for Motor Shield Channel A - MAIN OPERATIONS TRACK
@@ -465,7 +469,9 @@ void setup(){
 // NOW USE THE ABOVE MACRO TO CREATE THE CODE FOR EACH INTERRUPT
 
 ISR(TIMER1_COMPB_vect){     // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
+  digitalWrite(TESTPIN,HIGH);
   DCC_SIGNAL(mainRegs,1,14,tickCounter+=) // Change to 16 later
+  digitalWrite(TESTPIN,LOW);
 }
 
 #ifdef ARDUINO_AVR_UNO      // Configuration for UNO
