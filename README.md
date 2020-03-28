@@ -12,7 +12,7 @@ What’s in this Repository
 
 This repository, BaseStation-Uno, contains a complete DCC++ Base Station sketch designed for compiling and uploading into an Arduino Uno.  All sketch files are in the folder named DCCpp_Uno. More information about the sketch can be found in the included PDF file.
 
-To utilize this sketch, simply download a zip file of this repository and open the file DCCpp_Uno.ino within the DCCpp_Uno folder using your Arduino IDE. This can be done through the green <em>Clone or download...</em> button on the upper right. The master version is available <A HREF="../../archive/master.zip"> behind this ZIP archive link </A> as well.
+To utilize this sketch, simply download a zip file of this repository and open the file DCCpp_Uno.ino within the DCCpp_Uno folder using your Arduino IDE. This can be done through the green <em>Clone or download...</em> button on the upper right. The master version is available <A HREF="/habazut/dcc-ardu/archive/master.zip"> behind this ZIP archive link </A> as well.
 
  Please do not rename the folder containing the sketch code, nor add any files to that folder.  The Arduino IDE relies on the structure and name of the folder to properly display and compile the code.
 
