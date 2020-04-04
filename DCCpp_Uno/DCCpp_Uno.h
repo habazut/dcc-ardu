@@ -17,7 +17,7 @@ Part of DCC++ BASE STATION for the Arduino
 // RELEASE VERSION
 /////////////////////////////////////////////////////////////////////////////////////
 
-#define VERSION "1.3.0+haba"
+#define VERSION "11.0.0+haba"
 
 /////////////////////////////////////////////////////////////////////////////////////
 // AUTO-SELECT ARDUINO BOARD
@@ -25,6 +25,10 @@ Part of DCC++ BASE STATION for the Arduino
 
 #ifdef ARDUINO_AVR_MEGA                   // is using Mega 1280, define as Mega 2560 (pinouts and functionality are identical)
   #define ARDUINO_AVR_MEGA2560
+#endif
+
+#ifdef USE_TRIGGERPIN
+#define TRIGGERPIN 2                     // Should work on UNO and MEGA
 #endif
 
 #if defined  ARDUINO_AVR_UNO

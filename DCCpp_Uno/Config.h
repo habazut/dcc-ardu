@@ -57,14 +57,37 @@ Part of DCC++ BASE STATION for the Arduino
 
 /////////////////////////////////////////////////////////////////////////////////////
 //
-// ONLY ENABLE IF YOU ARE SURE THAT PIN 13 is not wired to motor shield
-// Value 0 or 1
+// USE_TRIGGERPIN: Enable code that switches the trigger pin on and off at end
+//                 of the preamble. This takes some clock cycles in the
+//                 interrupt routine for the main track.
+// USE_TRIGGERPIN_PER_BIT: As above but for every bit. This makes only sense
+//                 if USE_TRIGGERPIN is set.
 //
-#define LEDDEBUG 0
+// The value of the TRIGGERPIN is defined in DCCpp_Uno.h because it might
+// be board specific
+//
+#define USE_TRIGGERPIN
+//#define USE_TRIGGERPIN_PER_BIT
 
 /////////////////////////////////////////////////////////////////////////////////////
 //
+// Define only of you need the store to EEPROM feature. This takes RAM and
+// you may then use less MAX_MAIN_REGISTERS to compensate (at least on the UNO)
 //#define EESTORE
+//
+// Define only of you need fancy config output in the beginning. This takes RAM and
+// you may then use less MAX_MAIN_REGISTERS to compensate (at least on the UNO)
 //#define SHOWCONFIG // to preserve SDRAM
+
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// PREAMBLE_MAIN: Length of the preamble on the main track. Per standard this should
+//                be at least 14 bits but if some equipment wants to insert a RailCom
+//                cutout this should be at least 16 bits.
+// PERAMBLE_PROG: Length of the preamble on the programming track. Per standard this
+//                should be at least 22 bits 
+//
+#define PREAMBLE_MAIN 16
+#define PREAMBLE_PROG 22
 
 

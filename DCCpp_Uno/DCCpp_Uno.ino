@@ -253,7 +253,13 @@ void setup(){
   SerialCommand::init(&mainRegs, &progRegs, &mainMonitor);   // create structure to read and parse commands from serial line
 
   SerialCommand::printHeader();
-  
+
+#ifdef USE_TRIGGERPIN
+  // Set up testpin
+  pinMode(TRIGGERPIN,OUTPUT);
+  digitalWrite(TRIGGERPIN,LOW);
+#endif
+
   // CONFIGURE TIMER_1 TO OUTPUT 50% DUTY CYCLE DCC SIGNALS ON OC1B INTERRUPT PINS
   
   // Direction Pin for Motor Shield Channel A - MAIN OPERATIONS TRACK
@@ -313,12 +319,8 @@ void setup(){
   #define DCC_ONE_BIT_TOTAL_DURATION_TIMER0 28
   #define DCC_ONE_BIT_PULSE_DURATION_TIMER0 14
   
-#if LEDDEBUG == 1
-  pinMode(DIRECTION_MOTOR_CHANNEL_PIN_B, OUTPUT);    // Onboard LED sits on pin 13 which is DIRECTION_MOTOR_CHANNEL_PIN_B
-#else
   pinMode(DIRECTION_MOTOR_CHANNEL_PIN_B,INPUT);      // ensure this pin is not active! Direction will be controlled by DCC SIGNAL instead (below)
   digitalWrite(DIRECTION_MOTOR_CHANNEL_PIN_B,LOW);
-#endif
 
   pinMode(DCC_SIGNAL_PIN_PROG,OUTPUT);      // THIS ARDUINO OUTPUT PIN MUST BE PHYSICALLY CONNECTED TO THE PIN FOR DIRECTION-B OF MOTOR CHANNEL-B
 
@@ -412,11 +414,12 @@ void setup(){
 // that can be invoked with proper paramters for each interrupt.  This slightly increases the size of the code base by duplicating
 // some of the logic for each interrupt, but saves additional time.
 
-// Exactly how long this takes has to be measured (the original code completed at an average of just under 6 microseconds with a 
-// worse-case of just under 11 microseconds when a new register is loaded and the logic needs to switch active register packet pointers).
+// Measurement gives that the interrupt code takes mostly 8.4us, sometimes as short a 5.8us and at worst 12.2us.
 
-// THE INTERRUPT CODE MACRO:  R=REGISTER LIST (mainRegs or progRegs), and N=TIMER (0 or 1),
+// THE INTERRUPT CODE MACRO:  R=REGISTER LIST (mainRegs or progRegs)
+//                            N=TIMER (0 or 1)
 //                            PALEN=PREAMBLELENGTH (14 or 16 for RailCom om Main, 22 on Prog)
+//                            INCTICKOUNT Inserts (!) code that increases the tick counter, use only on ONE interrupt routine
 
 // optimize time critical stuff harder 
 #pragma GCC push_options
@@ -444,9 +447,6 @@ void setup(){
       R.currentReg++;                        /* jump to next register */ \
     }                                                              \
   }                                          /* END-BIG-IF */ \
-  if(LEDDEBUG && R.reg == mainRegs.reg && R.currentBit==0 && R.currentReg==R.reg+1){  /* At register number 1 */ \
-    R.debugcount++ & 1<<3 ? PORTB |= 32 : PORTB &=~ 32 ;                                                         \
-  }                                                                                                              \
                                                                                                                  \
   if(R.currentBit < PALEN || ( (R.currentReg->buf)[(R.currentBit-PALEN)/8] & R.bitMask[(R.currentBit-PALEN)%8] )) {  /* IF bit is a ONE */ \
     OCR ## N ## A=DCC_ONE_BIT_TOTAL_DURATION_TIMER ## N;                /*   set OCRA for timer N to full cycle duration of DCC ONE bit */ \
@@ -465,12 +465,21 @@ void setup(){
 // NOW USE THE ABOVE MACRO TO CREATE THE CODE FOR EACH INTERRUPT
 
 ISR(TIMER1_COMPB_vect){     // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
-  DCC_SIGNAL(mainRegs,1,14,tickCounter+=) // Change to 16 later
+#ifdef USE_TRIGGERPIN
+#ifndef USE_TRIGGERPIN_PER_BIT
+  if (mainRegs.currentBit == PREAMBLE_MAIN)
+#endif
+     digitalWrite(TRIGGERPIN,HIGH);
+#endif
+  DCC_SIGNAL(mainRegs,1,PREAMBLE_MAIN,tickCounter+=)
+#ifdef USE_TRIGGERPIN
+  digitalWrite(TRIGGERPIN,LOW);
+#endif
 }
 
 #ifdef ARDUINO_AVR_UNO      // Configuration for UNO
 ISR(TIMER0_COMPB_vect){     // set interrupt service for OCR1B of TIMER-0 which flips direction bit of Motor Shield Channel B controlling Prog Track
-  DCC_SIGNAL(progRegs,0,22,/* nothing */)
+  DCC_SIGNAL(progRegs,0,PREAMBLE_PROG,/* nothing */)
 }
 #else                       // Configuration for MEGA
 ISR(TIMER3_COMPB_vect){     // set interrupt service for OCR3B of TIMER-3 which flips direction bit of Motor Shield Channel B controlling Prog Track

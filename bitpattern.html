@@ -1,0 +1,28 @@
+<h2>Bitpattern output</H2>
+<h4>Test run to look at the bitpattern of the Arduino.</h4>
+
+Set speed 1 direction 0 of locomotive 3: 
+<tt>&lt;t 1 3 1 0&gt;</tt> with answer <tt>&lt;T1 1 0&gt;</tt>
+
+<pre>
+
+Debug output from &lt;L&gt; gives:
+
+Slot:   Reg    Bits
+M2:     770     37      1       8F      C0      43      E8
+
+        1               8F              C0             43             E8
+|---------------|---------------|---------------|---------------|---------------|
+ 0 0 0 0 0 0 0 1 1 0 0 0 1 1 1 1 1 1 0 0 0 0 0 0 0 1 0 0 0 0 1 1 1 1 1 0 1 0 0 0
+  |---------------| |---------------| |---------------| |---------------|
+          3                3F                 2                3E
+      00000011          00111111           00000010         00111110
+       Addr=3           speed126           Speed(*)         Checksum
+
+(*) 2 is speedstep 1 direction 0
+
+</pre>
+On the scope this looks like this.
+Curors are at start and end of packet, trigger is at end of 14 bit preamble:<br>
+
+<img src=SDS00007.png>
