@@ -16,13 +16,15 @@ To utilize this sketch, simply download a zip file of this repository and open t
 
  Please do not rename the folder containing the sketch code, nor add any files to that folder.  The Arduino IDE relies on the structure and name of the folder to properly display and compile the code.
 
-The version on the Master branch is currently 1.3.0+haba:
+The version on the Master branch is currently 11.0.0+haba. The high version number has been chose to avoid conflicts
+with the classic DCC++ code but should not indicate that dcc-ardu is "more".
 
 * Supports both the Arduino Uno and Arduino Mega (Mega untested)
 * Built-in configuration for both the original Arduino Motor Shield as well as a Pololu MC33926 Motor Shield
 * Built-in configuration and support of Ethernet Shields (for use with Mega only, untested)
 * Fixed: CV write in service mode (bitwise and bytewise)
 * Fixed: CV read in service mode (direct byte)
+* Emitsts a trigger pulse on pin 2 at end of preamble to be used with a scope.
 
 For more information on the overall DCC++ system, please follow the links in the PDF file.
 
