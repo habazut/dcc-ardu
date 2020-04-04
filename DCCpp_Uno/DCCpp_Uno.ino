@@ -416,8 +416,7 @@ void setup(){
 // that can be invoked with proper paramters for each interrupt.  This slightly increases the size of the code base by duplicating
 // some of the logic for each interrupt, but saves additional time.
 
-// Exactly how long this takes has to be measured (the original code completed at an average of just under 6 microseconds with a 
-// worse-case of just under 11 microseconds when a new register is loaded and the logic needs to switch active register packet pointers).
+// Measurement gives that the interrupt code takes mostly 8.4us, sometimes as short a 5.8us and at worst 12.2us.
 
 // THE INTERRUPT CODE MACRO:  R=REGISTER LIST (mainRegs or progRegs), and N=TIMER (0 or 1),
 //                            PALEN=PREAMBLELENGTH (14 or 16 for RailCom om Main, 22 on Prog)
@@ -469,7 +468,8 @@ void setup(){
 // NOW USE THE ABOVE MACRO TO CREATE THE CODE FOR EACH INTERRUPT
 
 ISR(TIMER1_COMPB_vect){     // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
-  digitalWrite(TESTPIN,HIGH);
+  if (mainRegs.currentBit==14) 
+     digitalWrite(TESTPIN,HIGH);
   DCC_SIGNAL(mainRegs,1,14,tickCounter+=) // Change to 16 later
   digitalWrite(TESTPIN,LOW);
 }

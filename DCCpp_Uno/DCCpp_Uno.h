@@ -27,7 +27,7 @@ Part of DCC++ BASE STATION for the Arduino
   #define ARDUINO_AVR_MEGA2560
 #endif
 
-#define TESTPIN 6
+#define TESTPIN 2
 
 #if defined  ARDUINO_AVR_UNO
 
