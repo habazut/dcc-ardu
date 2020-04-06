@@ -28,7 +28,7 @@ Part of DCC++ BASE STATION for the Arduino
 #endif
 
 #ifdef USE_TRIGGERPIN
-#define TRIGGERPIN 2                     // Should work on UNO and MEGA
+#define TRIGGERPIN 4                     // Should work on UNO and MEGA
 #endif
 
 #if defined  ARDUINO_AVR_UNO
