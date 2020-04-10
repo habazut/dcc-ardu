@@ -401,11 +401,11 @@ void SerialCommand::parse(char *com){
 /*
  *    reads current being drawn on main operations track
  *    
- *    returns: <a CURRENT> 
- *    where CURRENT = 0-1024, based on exponentially-smoothed weighting scheme
+ *    returns: <aCURRENT> 
+ *    where CURRENT = current on Main track in mA
  */
       INTERFACE.print(F("<a"));
-      INTERFACE.print(int(mMonitor->current));
+      INTERFACE.print(mainMonitor.getCurrent());
       INTERFACE.print(F(">"));
       break;
 

@@ -144,3 +144,6 @@ Part of DCC++ BASE STATION for the Arduino
 //
 // 
 extern volatile long int tickCounter;  // instead of clock because we don't have micros() on the UNO, TIMER0 used for DCC.
+class CurrentMonitor;
+extern CurrentMonitor mainMonitor;
+extern CurrentMonitor progMonitor;

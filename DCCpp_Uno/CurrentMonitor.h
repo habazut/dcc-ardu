@@ -13,24 +13,25 @@ Part of DCC++ BASE STATION for the Arduino
 
 #include "Arduino.h"
 
-#define  CURRENT_SAMPLE_SMOOTHING   0.01
-#define  CURRENT_SAMPLE_MAX         300
+#define  CURRENT_SAMPLE_MAX        1000       // When to turn off tracks (in mA)
+#define  SAMPLE_TICKS              5000       // 1 tick is 4us so 5000 is 20ms
 
-#ifdef ARDUINO_AVR_UNO                        // Configuration for UNO
-  #define  CURRENT_SAMPLE_TIME        20
-#else                                         // Configuration for MEGA    
-  #define  CURRENT_SAMPLE_TIME        2
-#endif
+class CurrentMonitor {
 
-struct CurrentMonitor{
   static long int sampleTime;
-  int signalpin;
-  int currentpin;
-  float current;
+  byte signalpin;
+  byte currentpin;
+  int current;                                // Real (corrected) current in mA, range 1mA to ~ 30A.
+  int conversionFactor;                       // Value to multiply to get mA from internal 0-1023 value
+  int conversionBias;                         // Value to add to get a zero read at no load
   const char *msg;
-  CurrentMonitor(int, int, const char *);
+
+public:
+  CurrentMonitor(byte, byte, const char *);
   static boolean checkTime();
   void check();
+  unsigned int read();
+  unsigned int getCurrent();
 };
 
 #endif
