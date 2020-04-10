@@ -420,9 +420,13 @@ void SerialCommand::parse(char *com){
  *    
  *    returns: <aVOLTAGE> 
  *    where VOLTAGE = current on Main track in XXXX
+ * 
+ *    4.88mV per unit
+ *    Voltage divider measured to be of factor 10.2
+ *
  */
       INTERFACE.print(F("<v"));
-      INTERFACE.print(10.2*4.9*mainVoltageMonitor.getVoltage()/1000);
+      INTERFACE.print(10.2*4.88*mainVoltageMonitor.getVoltage()/1000);
       INTERFACE.print(F(">"));
       break;
 

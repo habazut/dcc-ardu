@@ -21,7 +21,7 @@ CurrentMonitor::CurrentMonitor(byte sp, byte cp, const char *msg){
     this->currentpin=cp;
     this->msg=msg;
     current=0;
-    conversionPercent=300;           // see CurrentMonitor.h
+    conversionPercent=300;           // see CurrentMonitor.h (or 296)
 } // CurrentMonitor::CurrentMonitor
   
 boolean CurrentMonitor::checkTime(){
