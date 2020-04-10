@@ -21,17 +21,10 @@ CurrentMonitor::CurrentMonitor(byte sp, byte cp, const char *msg){
     this->currentpin=cp;
     this->msg=msg;
     current=0;
-    conversionFactor=3;
+    conversionPercent=300;           // see CurrentMonitor.h
 } // CurrentMonitor::CurrentMonitor
   
-/* Note: millis() uses TIMER-0.  For UNO, we change the scale on Timer-0. */
-/* For MEGA we do not.  This means millis() on the UNO is approx 8 to 10  */
-/* times too fast (actual scale depending on DCC packet output) and       */
-/* CURENT_SAMPLE_TIME is different for UNO than MEGA to compensate        */
-
 boolean CurrentMonitor::checkTime(){
-  unsigned long now;
-  now = millis();
   if((unsigned long)(sampleTime-tickCounter) < SAMPLE_TICKS)            // no need to check current yet
     return(false);
   sampleTime=tickCounter;
@@ -39,7 +32,7 @@ boolean CurrentMonitor::checkTime(){
 } // CurrentMonitor::checkTime
   
 unsigned int CurrentMonitor::read() {
-    return (unsigned int) conversionFactor * analogRead(currentpin);
+    return (unsigned int)(((unsigned long int)conversionPercent * analogRead(currentpin)) / 100);  // Force long int calc
 }
 
 void CurrentMonitor::check(){
