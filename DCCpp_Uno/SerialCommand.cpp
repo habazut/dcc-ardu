@@ -341,7 +341,7 @@ void SerialCommand::parse(char *com){
       pRegs->readCV(com+1);
       break;
 
-/***** TURN ON POWER FROM MOTOR SHIELD TO TRACKS  ****/    
+/***** TURN ON POWER FROM MOTOR SHIELD TO ALL TRACKS  ****/    
 
     case '1':      // <1>
 /*   
@@ -358,26 +358,31 @@ void SerialCommand::parse(char *com){
 
     case '2':      // <1>
 /*
- *    enables power from the motor shield to the main operations and programming tracks
+ *    enables power from the motor shield to the main operations track
  *
  *    returns: <p1>
  */
-/*     digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);*/
      digitalWrite(SIGNAL_ENABLE_PIN_MAIN,HIGH);
-     INTERFACE.print(F("<p1>"));
+     INTERFACE.print(F("<p1 MAIN>"));
+/*
+     int volts = analogRead(A2);
+     INTERFACE.print(F("<p1 "));
+     INTERFACE.print(volts);
+     INTERFACE.print(F(">"));
+*/
      break;
 
 /***** TURN ON POWER FROM MOTOR SHIELD TO PROG TRACK  ****/    
 
     case '3':      // <1>
 /*
- *    enables power from the motor shield to the main operations and programming tracks
+ *    enables power from the motor shield to the programming track
  *
  *    returns: <p1>
  */
      digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
 /*     digitalWrite(SIGNAL_ENABLE_PIN_MAIN,HIGH);*/
-     INTERFACE.print(F("<p1>"));
+     INTERFACE.print(F("<p1 PROG>"));
      break;
 
 /***** TURN OFF POWER FROM MOTOR SHIELD TO TRACKS  ****/    
@@ -406,6 +411,21 @@ void SerialCommand::parse(char *com){
       INTERFACE.print(mainMonitor.getCurrent());
       INTERFACE.print(F(">"));
       break;
+
+/***** READ MAIN OPERATIONS TRACK CURRENT  ****/    
+
+    case 'v':     // <v>
+/*
+ *    reads voltage on main operations track
+ *    
+ *    returns: <aVOLTAGE> 
+ *    where VOLTAGE = current on Main track in XXXX
+ */
+      INTERFACE.print(F("<v"));
+      INTERFACE.print(10.2*4.9*mainVoltageMonitor.getVoltage()/1000);
+      INTERFACE.print(F(">"));
+      break;
+
 
 /***** READ STATUS OF DCC++ BASE STATION  ****/    
 

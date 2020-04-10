@@ -173,6 +173,7 @@ DCC++ BASE STATION is configured through the Config.h file that contains all use
 #include "Config.h"
 #include "PacketRegister.h"
 #include "CurrentMonitor.h"
+#include "VoltageMonitor.h"
 #include "Sensor.h"
 #include "SerialCommand.h"
 #include "Accessories.h"
@@ -198,6 +199,7 @@ volatile RegisterList progRegs(2);                     // create a shorter list 
 
 volatile long int tickCounter = 0;
 
+VoltageMonitor mainVoltageMonitor(SIGNAL_ENABLE_PIN_MAIN, A2);  // create monitor for voltage on Main Track
 CurrentMonitor mainMonitor(SIGNAL_ENABLE_PIN_MAIN, CURRENT_MONITOR_PIN_MAIN, "<p2>");  // create monitor for current on Main Track
 CurrentMonitor progMonitor(SIGNAL_ENABLE_PIN_PROG, CURRENT_MONITOR_PIN_PROG, "<p3>");  // create monitor for current on Program Track
 
@@ -210,6 +212,7 @@ void loop(){
   SerialCommand::process();              // check for, and process, and new serial commands
   
   if(CurrentMonitor::checkTime()){      // if sufficient time has elapsed since last update, check current draw on Main and Program Tracks 
+    mainVoltageMonitor.check();
     mainMonitor.check();
     progMonitor.check();
   }

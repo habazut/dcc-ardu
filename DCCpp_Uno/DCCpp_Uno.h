@@ -147,3 +147,5 @@ extern volatile long int tickCounter;  // instead of clock because we don't have
 class CurrentMonitor;
 extern CurrentMonitor mainMonitor;
 extern CurrentMonitor progMonitor;
+class VoltageMonitor;
+extern VoltageMonitor mainVoltageMonitor;
