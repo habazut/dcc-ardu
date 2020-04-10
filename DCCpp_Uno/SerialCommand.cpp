@@ -40,14 +40,12 @@ int over(){
 char SerialCommand::commandString[MAX_COMMAND_LENGTH+1];
 volatile RegisterList *SerialCommand::mRegs;
 volatile RegisterList *SerialCommand::pRegs;
-CurrentMonitor *SerialCommand::mMonitor;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void SerialCommand::init(volatile RegisterList *_mRegs, volatile RegisterList *_pRegs, CurrentMonitor *_mMonitor){
+void SerialCommand::init(volatile RegisterList *_mRegs, volatile RegisterList *_pRegs){
   mRegs=_mRegs;
   pRegs=_pRegs;
-  mMonitor=_mMonitor;
   commandString[0] = '\0';
 } // SerialCommand:SerialCommand
 

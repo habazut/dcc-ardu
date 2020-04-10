@@ -250,7 +250,7 @@ void setup(){
     INTERFACE.begin();
   #endif
              
-  SerialCommand::init(&mainRegs, &progRegs, &mainMonitor);   // create structure to read and parse commands from serial line
+  SerialCommand::init(&mainRegs, &progRegs);   // create structure to read and parse commands from serial line
 
   SerialCommand::printHeader();
 
