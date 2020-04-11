@@ -1,6 +1,6 @@
 /**********************************************************************
 
-CurrentMonitor.h
+VoltageMonitor.h
 COPYRIGHT (c) 2020      Harald Barth
 
 Part of DCC++ BASE STATION for the Arduino

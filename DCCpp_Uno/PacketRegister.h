@@ -12,14 +12,15 @@ Part of DCC++ BASE STATION for the Arduino
 #define PacketRegister_h
 
 #include "Arduino.h"
+#include "CurrentMonitor.h"
 
 // Define constants used for reading CVs from the Programming Track
 
 #define  ACK_BASE_COUNT            100      // number of analogRead samples to take before each CV verify to establish a baseline current
 #define  ACK_SAMPLE_SMOOTHING      0.7      // exponential smoothing to use in processing the analogRead samples after a CV verify (bit or byte) has been sent
-#define  ACK_SAMPLE_THRESHOLD       30      // the threshold that the exponentially-smoothed analogRead samples 
+#define  ACK_SAMPLE_THRESHOLD       55      // the threshold that the exponentially-smoothed analogRead samples 
                                             // (after subtracting the baseline current) must cross to establish ACKNOWLEDGEMENT
-                                            // for the Arduino Motor Shield R3 with 1.65V/A we set this to 30 (30 * 1.65 = 49.50mA)
+                                            // The value is when taken from CurrentMonitor::read() in mA.
 
 // Define a series of registers that can be sequentially accessed over a loop to generate a repeating series of DCC Packets
 
@@ -45,9 +46,9 @@ struct RegisterList{
   static byte resetPacket[];
   static byte bitMask[];
   RegisterList(int);
-  byte ackdetect(int) volatile;
+  byte ackdetect(unsigned int) volatile;
   byte poweron() volatile;
-  int readBaseCurrent() volatile;
+  unsigned int readBaseCurrent() volatile;
   void loadPacket(int, byte *, int, int, int=0) volatile;
   void setThrottle(char *) volatile;
   void setFunction(char *) volatile;  

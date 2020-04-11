@@ -235,12 +235,12 @@ void RegisterList::writeTextPacket(char *s) volatile{
 
 /* ackdetect side-effect: Will restore resetPacket to slot 1 */
 
-byte RegisterList::ackdetect(int base) volatile{
+byte RegisterList::ackdetect(unsigned int base) volatile{
     byte upflankFound = 0;
     byte ackFound = 0;
     int c = 0;
     byte searchLowflank = 1;
-    int current;
+    unsigned int current;
     unsigned long acktime;
     unsigned long upflankTickCounter;
     unsigned long lowflankTickCounter;
@@ -248,8 +248,7 @@ byte RegisterList::ackdetect(int base) volatile{
 
     oldPacketCounter = packetsTransmitted; // remember time when we started
     for(;;){
-      current = analogRead(CURRENT_MONITOR_PIN_PROG);
-
+      current = progMonitor.read();
       /*INTERFACE.print(current-base); INTERFACE.print(".");*/
       c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING); /* XXX this does not do what the standard says */
       if(upflankFound != 1 ) {
@@ -310,11 +309,11 @@ byte RegisterList::poweron() volatile {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int RegisterList::readBaseCurrent() volatile {
-  int base=0;
+unsigned int RegisterList::readBaseCurrent() volatile {
+  unsigned int base=0;
   /* read base current */
   for(int j=0;j<ACK_BASE_COUNT;j++)
-    base+=analogRead(CURRENT_MONITOR_PIN_PROG);
+    base+=progMonitor.read();
   base/=ACK_BASE_COUNT;
   return base;
 } // RegisterList::readBaseCurrent()
@@ -323,7 +322,7 @@ void RegisterList::readCV(char *s) volatile{
   byte bRead[4];
   int bValue;
   byte d;                            // tmp var for holding ackdetect answer
-  int base;                          // measured base current before ack
+  unsigned int base;                 // measured base current before ack
   int cv, callBack, callBackSub;
   byte turnoff;                      // need to turn off power again
 
@@ -379,7 +378,7 @@ void RegisterList::writeCVByte(char *s) volatile{
   byte turnoff;
   int bValue;
   byte d;
-  int base;
+  unsigned int base;
   int cv, callBack, callBackSub;
 
   if(sscanf(s,"%d %d %d %d",&cv,&bValue,&callBack,&callBackSub)!=4)          // cv = 1-1024
@@ -425,7 +424,7 @@ void RegisterList::writeCVBit(char *s) volatile{
   byte turnoff;
   int bNum,bValue;
   byte d;
-  int base;
+  unsigned int base;
   int cv, callBack, callBackSub;
 
   if(sscanf(s,"%d %d %d %d %d",&cv,&bNum,&bValue,&callBack,&callBackSub)!=5)          // cv = 1-1024
