@@ -40,14 +40,12 @@ int over(){
 char SerialCommand::commandString[MAX_COMMAND_LENGTH+1];
 volatile RegisterList *SerialCommand::mRegs;
 volatile RegisterList *SerialCommand::pRegs;
-CurrentMonitor *SerialCommand::mMonitor;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void SerialCommand::init(volatile RegisterList *_mRegs, volatile RegisterList *_pRegs, CurrentMonitor *_mMonitor){
+void SerialCommand::init(volatile RegisterList *_mRegs, volatile RegisterList *_pRegs){
   mRegs=_mRegs;
   pRegs=_pRegs;
-  mMonitor=_mMonitor;
   commandString[0] = '\0';
 } // SerialCommand:SerialCommand
 
@@ -343,7 +341,7 @@ void SerialCommand::parse(char *com){
       pRegs->readCV(com+1);
       break;
 
-/***** TURN ON POWER FROM MOTOR SHIELD TO TRACKS  ****/    
+/***** TURN ON POWER FROM MOTOR SHIELD TO ALL TRACKS  ****/    
 
     case '1':      // <1>
 /*   
@@ -360,26 +358,31 @@ void SerialCommand::parse(char *com){
 
     case '2':      // <1>
 /*
- *    enables power from the motor shield to the main operations and programming tracks
+ *    enables power from the motor shield to the main operations track
  *
  *    returns: <p1>
  */
-/*     digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);*/
      digitalWrite(SIGNAL_ENABLE_PIN_MAIN,HIGH);
-     INTERFACE.print(F("<p1>"));
+     INTERFACE.print(F("<p1 MAIN>"));
+/*
+     int volts = analogRead(A2);
+     INTERFACE.print(F("<p1 "));
+     INTERFACE.print(volts);
+     INTERFACE.print(F(">"));
+*/
      break;
 
 /***** TURN ON POWER FROM MOTOR SHIELD TO PROG TRACK  ****/    
 
     case '3':      // <1>
 /*
- *    enables power from the motor shield to the main operations and programming tracks
+ *    enables power from the motor shield to the programming track
  *
  *    returns: <p1>
  */
      digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
 /*     digitalWrite(SIGNAL_ENABLE_PIN_MAIN,HIGH);*/
-     INTERFACE.print(F("<p1>"));
+     INTERFACE.print(F("<p1 PROG>"));
      break;
 
 /***** TURN OFF POWER FROM MOTOR SHIELD TO TRACKS  ****/    
@@ -401,13 +404,32 @@ void SerialCommand::parse(char *com){
 /*
  *    reads current being drawn on main operations track
  *    
- *    returns: <a CURRENT> 
- *    where CURRENT = 0-1024, based on exponentially-smoothed weighting scheme
+ *    returns: <aCURRENT> 
+ *    where CURRENT = current on Main track in mA
  */
       INTERFACE.print(F("<a"));
-      INTERFACE.print(int(mMonitor->current));
+      INTERFACE.print(mainMonitor.getCurrent());
       INTERFACE.print(F(">"));
       break;
+
+/***** READ MAIN OPERATIONS TRACK CURRENT  ****/    
+
+    case 'v':     // <v>
+/*
+ *    reads voltage on main operations track
+ *    
+ *    returns: <aVOLTAGE> 
+ *    where VOLTAGE = current on Main track in XXXX
+ * 
+ *    4.88mV per unit
+ *    Voltage divider measured to be of factor 10.2
+ *
+ */
+      INTERFACE.print(F("<v"));
+      INTERFACE.print(10.2*4.88*mainVoltageMonitor.getVoltage()/1000);
+      INTERFACE.print(F(">"));
+      break;
+
 
 /***** READ STATUS OF DCC++ BASE STATION  ****/    
 

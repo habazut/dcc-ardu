@@ -66,7 +66,7 @@ Part of DCC++ BASE STATION for the Arduino
 // The value of the TRIGGERPIN is defined in DCCpp_Uno.h because it might
 // be board specific
 //
-//#define USE_TRIGGERPIN
+#define USE_TRIGGERPIN
 //#define USE_TRIGGERPIN_PER_BIT
 
 /////////////////////////////////////////////////////////////////////////////////////

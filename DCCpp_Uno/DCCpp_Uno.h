@@ -28,7 +28,7 @@ Part of DCC++ BASE STATION for the Arduino
 #endif
 
 #ifdef USE_TRIGGERPIN
-#define TRIGGERPIN 2                     // Should work on UNO and MEGA
+#define TRIGGERPIN 4                     // Should work on UNO and MEGA
 #endif
 
 #if defined  ARDUINO_AVR_UNO
@@ -144,3 +144,8 @@ Part of DCC++ BASE STATION for the Arduino
 //
 // 
 extern volatile long int tickCounter;  // instead of clock because we don't have micros() on the UNO, TIMER0 used for DCC.
+class CurrentMonitor;
+extern CurrentMonitor mainMonitor;
+extern CurrentMonitor progMonitor;
+class VoltageMonitor;
+extern VoltageMonitor mainVoltageMonitor;
