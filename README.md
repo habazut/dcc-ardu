@@ -24,15 +24,14 @@ with the classic DCC++ code but should not indicate that dcc-ardu is "more".
 * Built-in configuration and support of Ethernet Shields (for use with Mega only, untested)
 * Fixed: CV write in service mode (bitwise and bytewise)
 * Fixed: CV read in service mode (direct byte)
-* Emitsts a trigger pulse on pin 2 at end of preamble to be used with a scope.
+* Emitsts a trigger pulse on pin 4 at end of preamble to be used with a scope if enabled in Config.h
 
-For more information on the overall DCC++ system, please follow the links in the PDF file.
-
-Detailed diagrams showing pin mappings and required jumpers for the Motor Shields can be found in the Documentation Repository
+Some notes taken during the project can be found <A HREF="https://habazut.github.io/dcc-ardu/"> in the docs corner</A>.
 
 This fork will be geared to be used together with JMRI and not as a standalone layout controller.
 
--Mon Mar  9 20:00:07 CET 2020
+-Sat Apr 11 21:00:00 CEST 2020
+
 
 
 
