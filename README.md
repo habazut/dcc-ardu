@@ -16,7 +16,7 @@ To utilize this sketch, simply download a zip file of this repository and open t
 
  Please do not rename the folder containing the sketch code, nor add any files to that folder.  The Arduino IDE relies on the structure and name of the folder to properly display and compile the code.
 
-The version on the Master branch is currently 11.0.0+haba. The high version number has been chose to avoid conflicts
+The version on the Master branch is currently 11.0.3+haba. The high version number has been chose to avoid conflicts
 with the classic DCC++ code but should not indicate that dcc-ardu is "more".
 
 * Supports both the Arduino Uno and Arduino Mega (Mega untested)

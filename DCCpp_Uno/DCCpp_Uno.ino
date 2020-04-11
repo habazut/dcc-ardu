@@ -197,7 +197,8 @@ void showConfiguration();
 volatile RegisterList mainRegs(MAX_MAIN_REGISTERS);    // create list of registers for MAX_MAIN_REGISTER Main Track Packets
 volatile RegisterList progRegs(2);                     // create a shorter list of only two registers for Program Track Packets
 
-volatile long int tickCounter = 0;
+volatile unsigned long int tickCounter = 0;
+volatile unsigned long int sampleTime = 0;
 
 VoltageMonitor mainVoltageMonitor(SIGNAL_ENABLE_PIN_MAIN, A2);  // create monitor for voltage on Main Track
 CurrentMonitor mainMonitor(SIGNAL_ENABLE_PIN_MAIN, CURRENT_MONITOR_PIN_MAIN, "<p2 MAIN>");  // create monitor for current on Main Track
@@ -210,8 +211,10 @@ CurrentMonitor progMonitor(SIGNAL_ENABLE_PIN_PROG, CURRENT_MONITOR_PIN_PROG, "<p
 void loop(){
   
   SerialCommand::process();              // check for, and process, and new serial commands
-  
-  if(CurrentMonitor::checkTime()){      // if sufficient time has elapsed since last update, check current draw on Main and Program Tracks 
+
+  // if sufficient time has elapsed since last update, check current draw on Main and Program Tracks 
+  if((unsigned long)(tickCounter-sampleTime) > SAMPLE_TICKS) {
+    sampleTime=tickCounter;
     mainVoltageMonitor.check();
     mainMonitor.check();
     progMonitor.check();

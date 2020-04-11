@@ -17,7 +17,14 @@ Part of DCC++ BASE STATION for the Arduino
 // RELEASE VERSION
 /////////////////////////////////////////////////////////////////////////////////////
 
-#define VERSION "11.0.2+haba"
+#define VERSION "11.0.3+haba"
+
+/////////////////////////////////////////////////////////////////////////////////////
+// How long to pause beteen reading current and voltage
+// from the analog inputs in the main loop.
+/////////////////////////////////////////////////////////////////////////////////////
+
+#define  SAMPLE_TICKS              5000       // 1 tick is 4us so 5000 is 20ms
 
 /////////////////////////////////////////////////////////////////////////////////////
 // AUTO-SELECT ARDUINO BOARD
@@ -143,7 +150,7 @@ Part of DCC++ BASE STATION for the Arduino
 /////////////////////////////////////////////////////////////////////////////////////
 //
 // 
-extern volatile long int tickCounter;  // instead of clock because we don't have micros() on the UNO, TIMER0 used for DCC.
+extern volatile unsigned long int tickCounter;  // instead of clock because we don't have micros() on the UNO, TIMER0 used for DCC.
 class CurrentMonitor;
 extern CurrentMonitor mainMonitor;
 extern CurrentMonitor progMonitor;

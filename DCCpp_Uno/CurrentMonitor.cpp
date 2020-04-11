@@ -24,13 +24,6 @@ CurrentMonitor::CurrentMonitor(byte sp, byte cp, const char *msg){
     conversionPercent=300;           // see CurrentMonitor.h (or 296)
 } // CurrentMonitor::CurrentMonitor
   
-boolean CurrentMonitor::checkTime(){
-  if((unsigned long)(sampleTime-tickCounter) < SAMPLE_TICKS)            // no need to check current yet
-    return(false);
-  sampleTime=tickCounter;
-  return(true);  
-} // CurrentMonitor::checkTime
-  
 unsigned int CurrentMonitor::read() {
     return (unsigned int)(((unsigned long int)conversionPercent * analogRead(currentpin)) / 100);  // Force long int calc
 }

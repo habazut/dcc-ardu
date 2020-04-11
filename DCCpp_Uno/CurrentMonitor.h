@@ -14,7 +14,6 @@ Part of DCC++ BASE STATION for the Arduino
 #include "Arduino.h"
 
 #define  CURRENT_SAMPLE_MAX        1000       // When to turn off tracks (in mA)
-#define  SAMPLE_TICKS              5000       // 1 tick is 4us so 5000 is 20ms
 
 class CurrentMonitor {
 
@@ -29,7 +28,6 @@ class CurrentMonitor {
 
 public:
   CurrentMonitor(byte, byte, const char *);
-  static boolean checkTime();
   void check();
   unsigned int read();
   unsigned int getCurrent();
