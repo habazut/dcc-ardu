@@ -25,6 +25,8 @@ with the classic DCC++ code but should not indicate that dcc-ardu is "more".
 * Fixed: CV write in service mode (bitwise and bytewise)
 * Fixed: CV read in service mode (direct byte)
 * Emitsts a trigger pulse on pin 4 at end of preamble to be used with a scope if enabled in Config.h
+* Current limits implemented on main (board specific) and prog (250mA according to NMRA) track.
+* Current limits are enforced with t< 20ms if current > 2 * Imax and logarithmical slower if Imax < I < 2 * Imax
 
 Some notes taken during the project can be found <A HREF="https://habazut.github.io/dcc-ardu/"> in the docs corner</A>.
 
