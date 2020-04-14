@@ -200,9 +200,17 @@ volatile RegisterList progRegs(2);                     // create a shorter list 
 volatile unsigned long int tickCounter = 0;
 volatile unsigned long int sampleTime = 0;
 
+//////////////////////////////////////////////////////////////////////////////
+// Create the global voltage and current monitors
+//////////////////////////////////////////////////////////////////////////////
+
 VoltageMonitor mainVoltageMonitor(SIGNAL_ENABLE_PIN_MAIN, A2);  // create monitor for voltage on Main Track
-CurrentMonitor mainMonitor(SIGNAL_ENABLE_PIN_MAIN, CURRENT_MONITOR_PIN_MAIN, "<p2 MAIN>");  // create monitor for current on Main Track
-CurrentMonitor progMonitor(SIGNAL_ENABLE_PIN_PROG, CURRENT_MONITOR_PIN_PROG, "<p2 PROG>");  // create monitor for current on Program Track
+
+// create monitor for current on Main Track
+CurrentMonitor mainMonitor(SIGNAL_ENABLE_PIN_MAIN, CURRENT_MONITOR_PIN_MAIN, MOTOR_SHIELD_CURRENT_LIMIT, "MAIN");
+
+// create monitor for current on Program Track. 250mA is the NMRA value for prog tracks.
+CurrentMonitor progMonitor(SIGNAL_ENABLE_PIN_PROG, CURRENT_MONITOR_PIN_PROG, 250, "PROG");
 
 ///////////////////////////////////////////////////////////////////////////////
 // MAIN ARDUINO LOOP
@@ -580,7 +588,7 @@ void showConfiguration(){
   
   #endif
 #endif
-  Serial.print("\n\nPROGRAM HALTED - PLEASE RESTART ARDUINO");
+  Serial.print(F("\n\nPROGRAM HALTED - PLEASE RESTART ARDUINO"));
 
   while(true);
 }

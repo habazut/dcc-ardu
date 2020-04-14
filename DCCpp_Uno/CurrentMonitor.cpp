@@ -16,12 +16,13 @@ Part of DCC++ BASE STATION for the Arduino
 
 class CurrentMonitor;
 
-CurrentMonitor::CurrentMonitor(byte sp, byte cp, const char *msg){
+CurrentMonitor::CurrentMonitor(byte sp, byte cp, int cl, const char *msg){
     this->signalpin=sp;
     this->currentpin=cp;
+    this->currentlimit=cl;
     this->msg=msg;
     current=0;
-    conversionPercent=300;           // see CurrentMonitor.h (or 296)
+    conversionPercent=CURRENT_CONVERSION_PERCENT;                 // see CurrentMonitor.h
 } // CurrentMonitor::CurrentMonitor
   
 unsigned int CurrentMonitor::read() {
@@ -29,10 +30,22 @@ unsigned int CurrentMonitor::read() {
 }
 
 void CurrentMonitor::check(){
-  current=read()/2 + current/2;                                        // simplified INTERGER arithmetics!!
-  if(current>CURRENT_SAMPLE_MAX){                                      // current overload and pin is on
-    digitalWrite(signalpin,LOW);                                       // disable pin in question
-    INTERFACE.print(msg);                                              // print corresponding error message
+  int c = read();
+  current=c/2 + current/2;                         // simplified INTERGER arithmetics to smooth current
+  if(c > 2*currentlimit || current>currentlimit){  // current overload: 2x current - cut direct, otherwise
+                                                   // use smoothed value. This algorithm can be improved.
+    digitalWrite(signalpin,LOW);                   // disable pin in question
+    INTERFACE.print(F("<p2 "));                    // print corresponding error message
+    INTERFACE.print(msg);
+    INTERFACE.print(F(" "));
+    if (c > 2*currentlimit)
+      INTERFACE.print(c);                          // momentary current
+    else
+      INTERFACE.print(current);                    // smoothed current over time
+    INTERFACE.print(F(">"));
+    current = currentlimit;                        // so we don't get false triggers next time
+                                                   // because of smoothing. If overcurrent persists
+                                                   // next read() will trigger again.
   }    
 } // CurrentMonitor::check  
 

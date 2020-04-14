@@ -71,6 +71,7 @@ Part of DCC++ BASE STATION for the Arduino
 #if MOTOR_SHIELD_TYPE == 0
 
   #define MOTOR_SHIELD_NAME "ARDUINO MOTOR SHIELD"
+  #define MOTOR_SHIELD_CURRENT_LIMIT 1500 //mA  - be conservative because of bad shields
 
   #define SIGNAL_ENABLE_PIN_MAIN 3
   #define SIGNAL_ENABLE_PIN_PROG 11
@@ -84,6 +85,7 @@ Part of DCC++ BASE STATION for the Arduino
 #elif MOTOR_SHIELD_TYPE == 1
 
   #define MOTOR_SHIELD_NAME "POLOLU MC33926 MOTOR SHIELD"
+  #define MOTOR_SHIELD_CURRENT_LIMIT 3000 //mA
 
   #define SIGNAL_ENABLE_PIN_MAIN 9
   #define SIGNAL_ENABLE_PIN_PROG 11
