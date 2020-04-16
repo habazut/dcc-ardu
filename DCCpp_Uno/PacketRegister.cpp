@@ -249,21 +249,29 @@ byte RegisterList::ackdetect(unsigned int base) volatile{
     oldPacketCounter = packetsTransmitted; // remember time when we started
     for(;;){
       current = progMonitor.read();
-      /*INTERFACE.print(current-base); INTERFACE.print(".");*/
-      c=(current-base)*ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING); /* XXX this does not do what the standard says */
+      if (base > current)
+	  current = base;                    // prevent negative values - XXX c, current, base can be written simpler later
+#ifdef DEBUGACK
+      INTERFACE.print(current-base); INTERFACE.print(".");
+#endif
+      c=(current-base)/**ACK_SAMPLE_SMOOTHING+c*(1.0-ACK_SAMPLE_SMOOTHING)*/; /* I don't believe in smoothing here */
       if(upflankFound != 1 ) {
         if (c>ACK_SAMPLE_THRESHOLD) {
 	  upflankFound=1;                                  // upflank found, set flag
 	  upflankTickCounter=tickCounter;                  // remember time when we got the upflank
-	  /*INTERFACE.print("^");*/
+#ifdef DEBUGACK
+	  INTERFACE.print("^");
+#endif
 	}
       } else {                                             // upflankFound == 1
         if (searchLowflank && c<ACK_SAMPLE_THRESHOLD) {    // lowflank found
 	  lowflankTickCounter = tickCounter;
 	  searchLowflank= 0;
 	  acktime = (unsigned long)(lowflankTickCounter - upflankTickCounter);
-	  /*INTERFACE.print("v"); INTERFACE.print(acktime*4); INTERFACE.print("v");*/
-	  if (acktime < 1125 || acktime > 1875) {         // 1125*4=4500us 1875*4=7500ms this is way to wide but let go for now
+#ifdef DEBUGACK
+	  INTERFACE.print("v"); INTERFACE.print(acktime*4); INTERFACE.print("v");
+#endif
+	  if (acktime < 1125 || acktime > 2125) {         // 1125*4=4500us 2125*4=8500us but our measurement is quite flaky
 	    upflankFound = 0;
 	    searchLowflank = 1;
 	  } else {
@@ -274,12 +282,16 @@ byte RegisterList::ackdetect(unsigned int base) volatile{
 	}
       }
       if(ackFound && (unsigned long)(packetsTransmitted - oldPacketCounter) >= 3) { // wait for at least 3 packets after detected Ack
-	  /*INTERFACE.print(packetsTransmitted);INTERFACE.print("!");*/
+#ifdef DEBUGACK
+	INTERFACE.print(packetsTransmitted);INTERFACE.print("!");
+#endif
 	return 1;                                       // We had an Ack 3 pkt ago, we can leave the detection loop
       }
       if ((unsigned long)(packetsTransmitted - oldPacketCounter) >= 9) { // Timeout: Wait for 3 reset, 5 vrfy and one extra packet time
         loadPacket(1,resetPacket,2,1);         // go back to transmitting reset packets
-	/*INTERFACE.print(packetsTransmitted); INTERFACE.print("X");*/
+#ifdef DEBUGACK
+	INTERFACE.print(packetsTransmitted); INTERFACE.print("X");
+#endif
 	return ackFound;                              // timeout, maybe no Ack found
       }
     }
