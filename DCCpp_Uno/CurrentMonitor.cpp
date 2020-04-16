@@ -34,7 +34,9 @@ void CurrentMonitor::check(){
   current=c/2 + current/2;                         // simplified INTERGER arithmetics to smooth current
   if(c > 2*currentlimit || current>currentlimit){  // current overload: 2x current - cut direct, otherwise
                                                    // use smoothed value. This algorithm can be improved.
-    digitalWrite(signalpin,LOW);                   // disable pin in question
+    if (current>currentlimit){
+	digitalWrite(signalpin,LOW);                   // disable pin in question
+    }
     INTERFACE.print(F("<p2 "));                    // print corresponding error message
     INTERFACE.print(msg);
     INTERFACE.print(F(" "));
