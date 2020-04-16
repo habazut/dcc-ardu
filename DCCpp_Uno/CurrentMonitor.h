@@ -32,6 +32,7 @@ class CurrentMonitor {
   static long int sampleTime;
   byte signalpin;
   byte currentpin;
+  byte power;
   int current;                    // Real (corrected) current in mA, range 1mA to ~ 30A.
   int conversionPercent;          // Percentvalue to get mA from internal 0-1023 value.
                                   // For a factor of 3 use 300, for 1.5 use 150
@@ -40,7 +41,12 @@ class CurrentMonitor {
 
 public:
   CurrentMonitor(byte, byte, int, const char *);
+  void on();
+  void off();
   void check();
+  inline byte powerstatus() {
+      return power;
+  }
   unsigned int read();
   unsigned int getCurrent();
 };

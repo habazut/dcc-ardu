@@ -22,9 +22,20 @@ CurrentMonitor::CurrentMonitor(byte sp, byte cp, int cl, const char *msg){
     this->currentlimit=cl;
     this->msg=msg;
     current=0;
+    power=0;
     conversionPercent=CURRENT_CONVERSION_PERCENT;                 // see CurrentMonitor.h
 } // CurrentMonitor::CurrentMonitor
-  
+
+void CurrentMonitor::on() {
+    digitalWrite(signalpin, HIGH);
+    power = 1;
+}
+
+void CurrentMonitor::off() {
+    digitalWrite(signalpin, LOW);
+    power = 0;
+}
+
 unsigned int CurrentMonitor::read() {
     return (unsigned int)(((unsigned long int)conversionPercent * analogRead(currentpin)) / 100);  // Force long int calc
 }
@@ -35,6 +46,7 @@ void CurrentMonitor::check(){
   if(c > 2*currentlimit || current>currentlimit){  // current overload: 2x current - cut direct, otherwise
                                                    // use smoothed value. This algorithm can be improved.
     digitalWrite(signalpin,LOW);                   // disable pin in question
+    power = 0;
     INTERFACE.print(F("<p2 "));                    // print corresponding error message
     INTERFACE.print(msg);
     INTERFACE.print(F(" "));

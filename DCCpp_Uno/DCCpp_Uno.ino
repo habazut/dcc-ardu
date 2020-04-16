@@ -168,7 +168,8 @@ DCC++ BASE STATION is configured through the Config.h file that contains all use
 **********************************************************************/
 
 // BEGIN BY INCLUDING THE HEADER FILES FOR EACH MODULE
- 
+
+#include "digitalWriteFast.h"
 #include "DCCpp_Uno.h"
 #include "Config.h"
 #include "PacketRegister.h"
@@ -271,7 +272,7 @@ void setup(){
 #ifdef USE_TRIGGERPIN
   // Set up testpin
   pinMode(TRIGGERPIN,OUTPUT);
-  digitalWrite(TRIGGERPIN,LOW);
+  digitalWriteFast(TRIGGERPIN,LOW);
 #endif
 
   // CONFIGURE TIMER_1 TO OUTPUT 50% DUTY CYCLE DCC SIGNALS ON OC1B INTERRUPT PINS
@@ -479,15 +480,34 @@ void setup(){
 // NOW USE THE ABOVE MACRO TO CREATE THE CODE FOR EACH INTERRUPT
 
 ISR(TIMER1_COMPB_vect){     // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
+
+  // Start RailCom cutout
+  if (mainRegs.currentBit == 1) {
+    digitalWriteFast(SIGNAL_ENABLE_PIN_MAIN, LOW);
+    digitalWriteFast(BRAKE_PIN_MAIN, HIGH);
+  }
 #ifdef USE_TRIGGERPIN
 #ifndef USE_TRIGGERPIN_PER_BIT
-  if (mainRegs.currentBit == PREAMBLE_MAIN)
+  if (mainRegs.currentBit == 1)      // middle of first pramble bit (must match below)
 #endif
-     digitalWrite(TRIGGERPIN,HIGH);
+     digitalWriteFast(TRIGGERPIN,HIGH);
 #endif
+
+  // End RailCom cutout
+  if (mainRegs.currentBit == 5) {
+    if (mainMonitor.powerstatus() == 1) {
+      digitalWriteFast(SIGNAL_ENABLE_PIN_MAIN, HIGH);
+    }
+    digitalWriteFast(BRAKE_PIN_MAIN, LOW);
+  }
+
   DCC_SIGNAL(mainRegs,1,PREAMBLE_MAIN,tickCounter+=)
+
 #ifdef USE_TRIGGERPIN
-  digitalWrite(TRIGGERPIN,LOW);
+#ifndef USE_TRIGGERPIN_PER_BIT
+  if (mainRegs.currentBit == 2)     // this is 2 because we incremented in the macro
+#endif
+    digitalWriteFast(TRIGGERPIN,LOW);
 #endif
 }
 
