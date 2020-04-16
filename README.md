@@ -16,7 +16,7 @@ To utilize this sketch, simply download a zip file of this repository and open t
 
  Please do not rename the folder containing the sketch code, nor add any files to that folder.  The Arduino IDE relies on the structure and name of the folder to properly display and compile the code.
 
-The version on the Master branch is currently 11.0.3+haba. The high version number has been chose to avoid conflicts
+The version on the Master branch is currently 11.0.5+haba. The high version number has been chose to avoid conflicts
 with the classic DCC++ code but should not indicate that dcc-ardu is "more".
 
 * Supports both the Arduino Uno and Arduino Mega (Mega untested)
@@ -27,6 +27,7 @@ with the classic DCC++ code but should not indicate that dcc-ardu is "more".
 * Emitsts a trigger pulse on pin 4 at end of preamble to be used with a scope if enabled in Config.h
 * Current limits implemented on main (board specific) and prog (250mA according to NMRA) track.
 * Current limits are enforced with t< 20ms if current > 2 * Imax and logarithmical slower if Imax < I < 2 * Imax
+* Ackdetect improved
 
 Some notes taken during the project can be found <A HREF="https://habazut.github.io/dcc-ardu/"> in the docs corner</A>.
 
