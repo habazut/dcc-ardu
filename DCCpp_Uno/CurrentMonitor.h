@@ -37,6 +37,7 @@ class CurrentMonitor {
                                   // For a factor of 3 use 300, for 1.5 use 150
   int currentlimit;               // limit for this output in mA
   const char *msg;
+  byte errors;
 
 public:
   CurrentMonitor(byte, byte, int, const char *);
