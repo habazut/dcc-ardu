@@ -76,8 +76,10 @@ Part of DCC++ BASE STATION for the Arduino
   #define SIGNAL_ENABLE_PIN_MAIN 3
   #define SIGNAL_ENABLE_PIN_PROG 11
 
+#ifdef RAILCOM_CUTOUT
   #define BRAKE_PIN_MAIN 9
 // not used yet  #define BRAKE_PIN_PROG 8
+#endif
 
   #define CURRENT_MONITOR_PIN_MAIN A0
   #define CURRENT_MONITOR_PIN_PROG A1
@@ -92,6 +94,12 @@ Part of DCC++ BASE STATION for the Arduino
 
   #define SIGNAL_ENABLE_PIN_MAIN 9
   #define SIGNAL_ENABLE_PIN_PROG 11
+
+#ifdef RAILCOM_CUTOUT
+  DONT KNOW BRAKE PINS FOR THIS MOTOR SHIELD
+  #define BRAKE_PIN_MAIN X
+// not used yet  #define BRAKE_PIN_PROG Y
+#endif
 
   #define CURRENT_MONITOR_PIN_MAIN A0
   #define CURRENT_MONITOR_PIN_PROG A1
