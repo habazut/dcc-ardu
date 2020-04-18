@@ -76,6 +76,9 @@ Part of DCC++ BASE STATION for the Arduino
   #define SIGNAL_ENABLE_PIN_MAIN 3
   #define SIGNAL_ENABLE_PIN_PROG 11
 
+  #define BRAKE_PIN_MAIN 9
+// not used yet  #define BRAKE_PIN_PROG 8
+
   #define CURRENT_MONITOR_PIN_MAIN A0
   #define CURRENT_MONITOR_PIN_PROG A1
 

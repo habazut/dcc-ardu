@@ -349,8 +349,8 @@ void SerialCommand::parse(char *com){
  *    
  *    returns: <p1>
  */    
-     digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
-     digitalWrite(SIGNAL_ENABLE_PIN_MAIN,HIGH);
+     mainMonitor.on();
+     progMonitor.on();
      INTERFACE.print(F("<p1>"));
      break;
           
@@ -362,14 +362,8 @@ void SerialCommand::parse(char *com){
  *
  *    returns: <p1>
  */
-     digitalWrite(SIGNAL_ENABLE_PIN_MAIN,HIGH);
+     mainMonitor.on();
      INTERFACE.print(F("<p1 MAIN>"));
-/*
-     int volts = analogRead(A2);
-     INTERFACE.print(F("<p1 "));
-     INTERFACE.print(volts);
-     INTERFACE.print(F(">"));
-*/
      break;
 
 /***** TURN ON POWER FROM MOTOR SHIELD TO PROG TRACK  ****/    
@@ -380,8 +374,7 @@ void SerialCommand::parse(char *com){
  *
  *    returns: <p1>
  */
-     digitalWrite(SIGNAL_ENABLE_PIN_PROG,HIGH);
-/*     digitalWrite(SIGNAL_ENABLE_PIN_MAIN,HIGH);*/
+     progMonitor.on();
      INTERFACE.print(F("<p1 PROG>"));
      break;
 
@@ -393,8 +386,8 @@ void SerialCommand::parse(char *com){
  *    
  *    returns: <p0>
  */
-     digitalWrite(SIGNAL_ENABLE_PIN_PROG,LOW);
-     digitalWrite(SIGNAL_ENABLE_PIN_MAIN,LOW);
+     mainMonitor.off();
+     progMonitor.off();
      INTERFACE.print(F("<p0>"));
      break;
 
