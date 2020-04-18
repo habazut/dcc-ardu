@@ -98,4 +98,9 @@ Part of DCC++ BASE STATION for the Arduino
 // circuits. 1 means shutdown at first over current occurence.
 //
 #define SHORT_SENSITIVITY 2
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// RAILCOM_CUTOUT: If you want to generate a railcom cutout. Experimental!
+//
+#define RAILCOM_CUTOUT
 
