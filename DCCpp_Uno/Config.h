@@ -90,4 +90,12 @@ Part of DCC++ BASE STATION for the Arduino
 #define PREAMBLE_MAIN 16
 #define PREAMBLE_PROG 22
 
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// SHORT_SENSITIVITY: Number of short current detections until rail is shut down
+// time between tests ist apperox 20ms
+// This can be increased at own risk if you have problems with slow auto reversing
+// circuits. 1 means shutdown at first over current occurence.
+//
+#define SHORT_SENSITIVITY 2
 

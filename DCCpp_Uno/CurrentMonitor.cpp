@@ -31,29 +31,21 @@ unsigned int CurrentMonitor::read() {
 }
 
 void CurrentMonitor::check(){
-  int c = read();
-  current=c/2 + current/2;                         // simplified INTERGER arithmetics to smooth current
-  if(c > 2*currentlimit || current>currentlimit){  // current overload: 2x current - cut direct, otherwise
-                                                   // use smoothed value. This algorithm can be improved.
-    errors++;
-    if (errors>9){
-	digitalWrite(signalpin,LOW);                   // disable pin in question
+  current = read();
+  if(current > currentlimit) {                     // current overload
+      errors++;                                    // start counting
+      /*INTERFACE.print(".");*/
+    if (errors >= SHORT_SENSITIVITY){
+	digitalWrite(signalpin,LOW);               // disable pin in question
+	INTERFACE.print(F("<p2 "));                // print corresponding error message
+	INTERFACE.print(msg);
+	INTERFACE.print(" ");
+	INTERFACE.print(current);
+	INTERFACE.print(F(">"));
     }
-    INTERFACE.print(F("<p2 "));                    // print corresponding error message
-    INTERFACE.print(msg);
-    INTERFACE.print(F(" Errors: "));
-    INTERFACE.print(errors);
-    INTERFACE.print(" MomCurrent: ");
-    INTERFACE.print(c);                          // momentary current
-    INTERFACE.print(" SmoothCurrent: ");
-    INTERFACE.print(current);                    // smoothed current over time
-    INTERFACE.print(F(">"));
-    current = currentlimit;                        // so we don't get false triggers next time
-                                                   // because of smoothing. If overcurrent persists
-                                                   // next read() will trigger again.
   } else {
-      errors = 0;
-  }   
+      errors = 0;                                  // current under limit, reset counter
+  }
 } // CurrentMonitor::check  
 
 unsigned int CurrentMonitor::getCurrent() {
