@@ -480,32 +480,31 @@ void setup(){
 // NOW USE THE ABOVE MACRO TO CREATE THE CODE FOR EACH INTERRUPT
 
 ISR(TIMER1_COMPB_vect){     // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
-
-  // Start RailCom cutout
-  if (mainRegs.currentBit == 1) {
+#ifdef RAILCOM_CUTOUT
+  if (mainRegs.currentBit == 1) {                     // Start RailCom cutout
     digitalWriteFast(SIGNAL_ENABLE_PIN_MAIN, LOW);
     digitalWriteFast(BRAKE_PIN_MAIN, HIGH);
   }
+#endif
 #ifdef USE_TRIGGERPIN
 #ifndef USE_TRIGGERPIN_PER_BIT
-  if (mainRegs.currentBit == 1)      // middle of first pramble bit (must match below)
+#define TRIGGERBIT 1                                  // middle of first preamble bit (must match below)
+  if (mainRegs.currentBit == TRIGGERBIT)
 #endif
      digitalWriteFast(TRIGGERPIN,HIGH);
 #endif
-
-  // End RailCom cutout
-  if (mainRegs.currentBit == 5) {
+#ifdef RAILCOM_CUTOUT
+  if (mainRegs.currentBit == 5) {                     // End RailCom cutout
     if (mainMonitor.powerstatus() == 1) {
       digitalWriteFast(SIGNAL_ENABLE_PIN_MAIN, HIGH);
     }
     digitalWriteFast(BRAKE_PIN_MAIN, LOW);
   }
-
-  DCC_SIGNAL(mainRegs,1,PREAMBLE_MAIN,tickCounter+=)
-
+#endif
+  DCC_SIGNAL(mainRegs,1,PREAMBLE_MAIN,tickCounter+=)  // Call macro above
 #ifdef USE_TRIGGERPIN
 #ifndef USE_TRIGGERPIN_PER_BIT
-  if (mainRegs.currentBit == 2)     // this is 2 because we incremented in the macro
+  if (mainRegs.currentBit == (TRIGGERBIT + 1))        // currentBit was incremented in the macro
 #endif
     digitalWriteFast(TRIGGERPIN,LOW);
 #endif
@@ -517,7 +516,7 @@ ISR(TIMER0_COMPB_vect){     // set interrupt service for OCR1B of TIMER-0 which 
 }
 #else                       // Configuration for MEGA
 ISR(TIMER3_COMPB_vect){     // set interrupt service for OCR3B of TIMER-3 which flips direction bit of Motor Shield Channel B controlling Prog Track
-  DCC_SIGNAL(progRegs,3,22,/* nothing */)
+  DCC_SIGNAL(progRegs,3,PREAMBLE_PROG,/* nothing */)
 }
 #endif
 
