@@ -298,6 +298,11 @@ void setup(){
 
   pinMode(DCC_SIGNAL_PIN_MAIN, OUTPUT);      // THIS ARDUINO OUTPUT PIN MUST BE PHYSICALLY CONNECTED TO THE PIN FOR DIRECTION-A OF MOTOR CHANNEL-A
 
+#ifdef RAILCOM_CUTOUT
+  pinMode(BRAKE_PIN_MAIN, OUTPUT);
+  digitalWrite(BRAKE_PIN_MAIN, LOW);
+#endif
+
   bitSet(TCCR1A,WGM10);     // set Timer 1 to FAST PWM, with TOP=OCR1A
   bitSet(TCCR1A,WGM11);
   bitSet(TCCR1B,WGM12);
@@ -482,7 +487,6 @@ void setup(){
 ISR(TIMER1_COMPB_vect){     // set interrupt service for OCR1B of TIMER-1 which flips direction bit of Motor Shield Channel A controlling Main Track
 #ifdef RAILCOM_CUTOUT
   if (mainRegs.currentBit == 1) {                     // Start RailCom cutout
-    digitalWriteFast(SIGNAL_ENABLE_PIN_MAIN, LOW);
     digitalWriteFast(BRAKE_PIN_MAIN, HIGH);
   }
 #endif
@@ -495,9 +499,6 @@ ISR(TIMER1_COMPB_vect){     // set interrupt service for OCR1B of TIMER-1 which 
 #endif
 #ifdef RAILCOM_CUTOUT
   if (mainRegs.currentBit == 5) {                     // End RailCom cutout
-    if (mainMonitor.powerstatus() == 1) {
-      digitalWriteFast(SIGNAL_ENABLE_PIN_MAIN, HIGH);
-    }
     digitalWriteFast(BRAKE_PIN_MAIN, LOW);
   }
 #endif

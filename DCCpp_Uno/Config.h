@@ -104,4 +104,3 @@ Part of DCC++ BASE STATION for the Arduino
 // RAILCOM_CUTOUT: If you want to generate a railcom cutout. Experimental!
 //
 //#define RAILCOM_CUTOUT
-
