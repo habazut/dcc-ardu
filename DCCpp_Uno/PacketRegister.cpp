@@ -109,7 +109,9 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
   if (nReg != 0)                    // if nReg was 0 then we waited above
     while(nextReg!=NULL);           // busy wait while there is a Register already waiting to be updated
                                     // nextReg will be reset to NULL by interrupt when prior Register updated fully processed
+  noInterrupts();
   nextReg=p;
+  interrupts();
 
   this->nRepeat=nRepeat;
   maxLoadedReg=max(maxLoadedReg,nextReg);
