@@ -23,9 +23,47 @@ CurrentMonitor::CurrentMonitor(byte sp, byte cp, int cl, const char *msg){
     this->msg=msg;
     current=0;
     power=0;
-    conversionPercent=CURRENT_CONVERSION_PERCENT;                 // see CurrentMonitor.h
+    conversionPromille=CURRENT_CONVERSION_PROMILLE;                 // see CurrentMonitor.h
+    vccPromille=0;
     errors=0;
 } // CurrentMonitor::CurrentMonitor
+
+// Returns the promille current readings must be corrected
+// because Vref = Vcc is off. So if Vcc is 90.9% this
+// returns 1000/909=1100.
+int CurrentMonitor::vccCorrection() {
+  long int result;
+  long int debugresult;
+  int returnval;
+
+  // Read 1.1V reference against AVcc
+#if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+  ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+#elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
+  ADMUX = _BV(MUX5) | _BV(MUX0);
+#elif defined (__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
+  ADMUX = _BV(MUX3) | _BV(MUX2);
+#else
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+#endif
+  delayMicroseconds(600); // My tests have given that the results stabilize at approx 500us (and above)
+  ADCSRA |= _BV(ADSC); // Convert
+  while (bit_is_set(ADCSRA, ADSC));
+  result = ADCL;
+  result |= ADCH << 8;
+  // 1.1*1024=1126.4
+  returnval = 1000L*225/result;
+#define DEBUGPRINT
+#ifdef DEBUGPRINT
+  debugresult = 1126400L / result; // Calculate Vcc (in mV); 1126400 = 1.1*1024*1000
+  INTERFACE.print(F("<V "));
+  INTERFACE.print(debugresult);
+  INTERFACE.print(F(" "));
+  INTERFACE.print(returnval);
+  INTERFACE.println(F(">"));
+#endif
+  return returnval;
+}
 
 void CurrentMonitor::on() {
     digitalWrite(signalpin, HIGH);
@@ -38,7 +76,10 @@ void CurrentMonitor::off() {
 }
 
 unsigned int CurrentMonitor::read() {
-    return (unsigned int)(((unsigned long int)conversionPercent * analogRead(currentpin)) / 100);  // Force long int calc
+    if( vccPromille == 0) {
+	vccPromille = (vccCorrection() + vccCorrection())/2;  // Average over 2 readings
+    }
+    return (unsigned int)(((unsigned long int)conversionPromille * vccPromille * analogRead(currentpin)) / 1000000L);  // Force long int calc
 }
 
 void CurrentMonitor::check(){

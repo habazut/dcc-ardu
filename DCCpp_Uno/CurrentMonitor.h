@@ -15,10 +15,10 @@ Part of DCC++ BASE STATION for the Arduino
 #include "Config.h"
 
 #if MOTOR_SHIELD_TYPE == 0
-#define CURRENT_CONVERSION_PERCENT 296   // 0.0049/1.65*1000*100
+#define CURRENT_CONVERSION_PROMILLE 2969   // 0.0049/1.65*1000*1000
 #endif
 #if MOTOR_SHIELD_TYPE == 1
-#define CURRENT_CONVERSION_PERCENT 933   // 0.0049/0.525*1000*100
+#define CURRENT_CONVERSION_PROMILLE 9333   // 0.0049/0.525*1000*100
 #endif
 // These value will not work because if then DAC returns 1 then we
 // already draw 466mA so the resolution is totally broken (a value
@@ -34,11 +34,14 @@ class CurrentMonitor {
   byte currentpin;
   byte power;
   int current;                    // Real (corrected) current in mA, range 1mA to ~ 30A.
-  int conversionPercent;          // Percentvalue to get mA from internal 0-1023 value.
-                                  // For a factor of 3 use 300, for 1.5 use 150
+  int conversionPromille;          // Percentvalue to get mA from internal 0-1023 value.
+                                  // For a factor of 3 use 3000, for 1.5 use 1500
+  int vccPromille;
   int currentlimit;               // limit for this output in mA
   const char *msg;
   byte errors;
+
+  int vccCorrection();
 
 public:
   CurrentMonitor(byte, byte, int, const char *);

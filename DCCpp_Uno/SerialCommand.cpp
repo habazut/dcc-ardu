@@ -400,9 +400,12 @@ void SerialCommand::parse(char *com){
  *    returns: <aCURRENT> 
  *    where CURRENT = current on Main track in mA
  */
-      INTERFACE.print(F("<a"));
-      INTERFACE.print(mainMonitor.getCurrent());
-      INTERFACE.print(F(">"));
+      {
+        unsigned int maincur = mainMonitor.getCurrent();
+        INTERFACE.print(F("<a"));
+        INTERFACE.print(maincur);
+        INTERFACE.print(F(">"));
+      }
       break;
 
 /***** READ MAIN OPERATIONS TRACK CURRENT  ****/    
