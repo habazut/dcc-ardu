@@ -53,7 +53,6 @@ int CurrentMonitor::vccCorrection() {
   result |= ADCH << 8;
   // 1.1*1024=1126.4
   returnval = 1000L*225/result;
-#define DEBUGPRINT
 #ifdef DEBUGPRINT
   debugresult = 1126400L / result; // Calculate Vcc (in mV); 1126400 = 1.1*1024*1000
   INTERFACE.print(F("<V "));
