@@ -109,4 +109,4 @@ Part of DCC++ BASE STATION for the Arduino
 //
 // ACCESSORIES_REVERSED reverse the direction of all accessories
 //
-#define ACCESSORIES_REVERSED
+//#define ACCESSORIES_REVERSED
