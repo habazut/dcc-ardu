@@ -115,7 +115,7 @@ void RegisterList::loadPacket(int nReg, byte *b, int nBytes, int nRepeat, int pr
 
   this->nRepeat=nRepeat;
   maxLoadedReg=max(maxLoadedReg,nextReg);
-  
+
   if(printFlag && SHOW_PACKETS)       // for debugging purposes
     printPacket(nReg,b,nBytes,nRepeat);  
 
@@ -206,9 +206,21 @@ void RegisterList::setAccessory(char *s) volatile{
   
   if(sscanf(s,"%d %d %d",&aAdd,&aNum,&activate)!=3)
     return;
+
+  // use masks to detect wrong values and do nothing
+  if(aAdd != aAdd&511)
+    return;
+  if(aNum != aNum&3)
+    return;
+  if(activate != activate&1)
+    return;
+
+#ifdef ACCESSORIES_REVERSED
+  activate = !activate;
+#endif
     
   b[0]=aAdd%64+128;                                           // first byte is of the form 10AAAAAA, where AAAAAA represent 6 least signifcant bits of accessory address  
-  b[1]=((((aAdd/64)%8)<<4) + (aNum%4<<1) + activate%2) ^ 0xF8;      // second byte is of the form 1AAACDDD, where C should be 1, and the least significant D represent activate/deactivate
+  b[1]=((((aAdd/64)%8)<<4) + (aNum<<1) + activate) ^ 0xF8;      // second byte is of the form 1AAACDDD, where C should be 1, and the least significant D represent activate/deactivate
       
   loadPacket(0,b,2,4,1);
       
