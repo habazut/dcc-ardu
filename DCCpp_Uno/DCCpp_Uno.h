@@ -17,7 +17,7 @@ Part of DCC++ BASE STATION for the Arduino
 // RELEASE VERSION
 /////////////////////////////////////////////////////////////////////////////////////
 
-#define VERSION "11.0.8+haba"
+#define VERSION "11.0.9+haba"
 
 /////////////////////////////////////////////////////////////////////////////////////
 // How long to pause beteen reading current and voltage
@@ -83,6 +83,7 @@ Part of DCC++ BASE STATION for the Arduino
 
   #define CURRENT_MONITOR_PIN_MAIN A0
   #define CURRENT_MONITOR_PIN_PROG A1
+  #define VOLTAGE_MONITOR_PIN_MAIN A2
 
   #define DIRECTION_MOTOR_CHANNEL_PIN_A 12
   #define DIRECTION_MOTOR_CHANNEL_PIN_B 13

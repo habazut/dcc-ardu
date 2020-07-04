@@ -205,7 +205,7 @@ volatile unsigned long int sampleTime = 0;
 // Create the global voltage and current monitors
 //////////////////////////////////////////////////////////////////////////////
 
-VoltageMonitor mainVoltageMonitor(SIGNAL_ENABLE_PIN_MAIN, A2);  // create monitor for voltage on Main Track
+VoltageMonitor mainVoltageMonitor(SIGNAL_ENABLE_PIN_MAIN, VOLTAGE_MONITOR_PIN_MAIN);  // create monitor for voltage on Main Track
 
 // create monitor for current on Main Track
 CurrentMonitor mainMonitor(SIGNAL_ENABLE_PIN_MAIN, CURRENT_MONITOR_PIN_MAIN, MOTOR_SHIELD_CURRENT_LIMIT, "MAIN");
@@ -250,6 +250,10 @@ void setup(){
 #ifdef EESTORE
   EEStore::init();                                          // initialize and load Turnout and Sensor definitions stored in EEPROM
 #endif
+
+  pinMode(CURRENT_MONITOR_PIN_MAIN, INPUT);
+  pinMode(CURRENT_MONITOR_PIN_PROG, INPUT);
+  pinMode(VOLTAGE_MONITOR_PIN_MAIN, INPUT);
 
   pinMode(A5,INPUT);                                       // if pin A5 is grounded upon start-up, print system configuration and halt
   digitalWrite(A5,HIGH);
