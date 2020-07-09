@@ -239,6 +239,11 @@ void loop(){
 
 void setup(){  
 
+#define _nD2 4
+
+  pinMode(_nD2,OUTPUT);
+  digitalWrite(_nD2,HIGH); // default to on
+
   Serial.begin(115200);            // configure serial interface
   Serial.flush();
 

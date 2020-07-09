@@ -76,7 +76,8 @@ void CurrentMonitor::off() {
 
 unsigned int CurrentMonitor::read() {
     if( vccPromille == 0) {
-	vccPromille = (vccCorrection() + vccCorrection())/2;  // Average over 2 readings
+//	vccPromille = (vccCorrection() + vccCorrection())/2;  // Average over 2 readings
+        vccPromille = 1000;
     }
     return (unsigned int)(((unsigned long int)conversionPromille * vccPromille * analogRead(currentpin)) / 1000000L);  // Force long int calc
 }
