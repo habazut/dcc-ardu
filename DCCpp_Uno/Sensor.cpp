@@ -132,7 +132,7 @@ Sensor* Sensor::get(int n){
 void Sensor::remove(int n){
   Sensor *tt,*pp;
   
-  for(tt=firstSensor;tt!=NULL && tt->data.snum!=n;pp=tt,tt=tt->nextSensor);
+  for(pp=tt=firstSensor;tt!=NULL && tt->data.snum!=n;pp=tt,tt=tt->nextSensor);
 
   if(tt==NULL){
     INTERFACE.print("<X>");
@@ -191,7 +191,6 @@ void Sensor::status(){
 
 void Sensor::parse(char *c){
   int n,s,m;
-  Sensor *t;
   
   switch(sscanf(c,"%d %d %d",&n,&s,&m)){
     

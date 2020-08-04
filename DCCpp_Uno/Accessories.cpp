@@ -99,7 +99,7 @@ Turnout* Turnout::get(int n){
 void Turnout::remove(int n){
   Turnout *tt,*pp;
   
-  for(tt=firstTurnout;tt!=NULL && tt->data.id!=n;pp=tt,tt=tt->nextTurnout);
+  for(pp=tt=firstTurnout;tt!=NULL && tt->data.id!=n;pp=tt,tt=tt->nextTurnout);
 
   if(tt==NULL){
     INTERFACE.print("<X>");
@@ -175,10 +175,10 @@ void Turnout::parse(char *c){
 ///////////////////////////////////////////////////////////////////////////////
 
 void Turnout::load(){
+#ifdef EESTORE
   struct TurnoutData data;
   Turnout *tt;
 
-#ifdef EESTORE
   for(int i=0;i<EEStore::eeStore->data.nTurnouts;i++){
     EEPROM.get(EEStore::pointer(),data);  
     tt=create(data.id,data.address,data.subAddress);
@@ -192,10 +192,10 @@ void Turnout::load(){
 ///////////////////////////////////////////////////////////////////////////////
 
 void Turnout::store(){
+#ifdef EESTORE
   Turnout *tt;
   
   tt=firstTurnout;
-#ifdef EESTORE
   EEStore::eeStore->data.nTurnouts=0;
   
   while(tt!=NULL){

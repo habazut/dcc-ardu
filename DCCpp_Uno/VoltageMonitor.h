@@ -19,7 +19,7 @@ class VoltageMonitor {
   byte signalpin;
   byte voltagepin;
   byte v=0;
-  int voltage[VOLTARR];                    // Real (corrected) current in mA, range 1mA to ~ 30A.
+  unsigned int voltage[VOLTARR];  // Real (corrected) current in mA, range 1mA to ~ 30A.
   int conversionPercent;          // Percentvalue to get mA from internal 0-1023 value.
                                   // For a factor of 3 use 300, for 1.5 use 150
 public:

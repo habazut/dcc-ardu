@@ -444,7 +444,8 @@ void setup(){
 //                            N=TIMER (0 or 1)
 //                            PALEN=PREAMBLELENGTH (14 or 16 for RailCom om Main, 22 on Prog)
 //                            INCTICKOUNT Inserts (!) code that increases the tick counter, use only on ONE interrupt routine
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
 // optimize time critical stuff harder 
 #pragma GCC push_options
 #pragma GCC optimize ("-O3")
@@ -527,6 +528,7 @@ ISR(TIMER3_COMPB_vect){     // set interrupt service for OCR3B of TIMER-3 which 
 
 // pop the -O3
 #pragma GCC pop_options
+#pragma GCC diagnostic pop
 
 ///////////////////////////////////////////////////////////////////////////////
 // PRINT CONFIGURATION INFO TO SERIAL PORT REGARDLESS OF INTERFACE TYPE

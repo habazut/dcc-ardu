@@ -109,7 +109,7 @@ Output* Output::get(int n){
 void Output::remove(int n){
   Output *tt,*pp;
   
-  for(tt=firstOutput;tt!=NULL && tt->data.id!=n;pp=tt,tt=tt->nextOutput);
+  for(pp=tt=firstOutput;tt!=NULL && tt->data.id!=n;pp=tt,tt=tt->nextOutput);
 
   if(tt==NULL){
     INTERFACE.print("<X>");
